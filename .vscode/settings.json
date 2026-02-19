@@ -1,4 +1,5 @@
 {
+    "biome.enabled": true,
     "editor.defaultFormatter": "biomejs.biome",
     "typescript.enablePromptUseWorkspaceTsdk": false,
     "files.associations": {
