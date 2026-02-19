@@ -16,3 +16,9 @@ project:
 # Since this project can infer task from script (package.json), then you can run any script as moon task.
 # @see: https://moonrepo.dev/api/types/interface/NodeConfig#inferTasksFromScripts
 # Example: `moon shared-ui:typecheck`
+tasks:
+  storybook-upgrade:
+    command: 'pnpm dlx storybook@latest upgrade'
+    options:
+      runDepsInParallel: false
+      cache: false
