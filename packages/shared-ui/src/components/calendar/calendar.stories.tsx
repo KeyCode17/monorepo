@@ -1,4 +1,4 @@
-import { zodResolver } from "@hookform/resolvers/zod";
+import { zodResolver } from '@hookform/resolvers/zod';
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { consola } from "consola";
 import { addDays, format } from "date-fns";
@@ -6,7 +6,7 @@ import * as Lucide from "lucide-react";
 import * as React from "react";
 import type { DateRange } from "react-day-picker";
 import { useForm } from "react-hook-form";
-import { z } from "zod";
+import { z } from "zod/v3";
 import { clx } from "../../utils";
 import { Button } from "../button/button";
 import {

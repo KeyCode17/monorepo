@@ -3,7 +3,9 @@ import * as React from "react";
 import type { TabsVariants } from "./tabs.css";
 import { tabsStyles } from "./tabs.css";
 
-const Tabs = TabsPrimitive.Root;
+const Tabs = TabsPrimitive.Root as React.ComponentType<
+	React.ComponentPropsWithoutRef<typeof TabsPrimitive.Root>
+>;
 
 export interface TabsListProps
 	extends React.ComponentPropsWithoutRef<typeof TabsPrimitive.List>,
@@ -23,7 +25,9 @@ const TabsList = React.forwardRef<
 	);
 });
 
-const TabsTrigger = React.forwardRef<
+const TabsTrigger: React.ComponentType<
+	React.ComponentPropsWithoutRef<typeof TabsPrimitive.Trigger>
+> = React.forwardRef<
 	React.ComponentRef<typeof TabsPrimitive.Trigger>,
 	React.ComponentPropsWithoutRef<typeof TabsPrimitive.Trigger>
 >(({ className, ...props }, ref) => {
@@ -37,7 +41,9 @@ const TabsTrigger = React.forwardRef<
 	);
 });
 
-const TabsContent = React.forwardRef<
+const TabsContent: React.ComponentType<
+	React.ComponentPropsWithoutRef<typeof TabsPrimitive.Content>
+> = React.forwardRef<
 	React.ComponentRef<typeof TabsPrimitive.Content>,
 	React.ComponentPropsWithoutRef<typeof TabsPrimitive.Content>
 >(({ className, ...props }, ref) => {

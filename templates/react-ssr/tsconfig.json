@@ -11,7 +11,7 @@
       "DOM.Iterable",
       "ES2023"
     ],
-    "module": "ESNext",
+    "module": "esnext",
     "moduleResolution": "bundler",
     "noEmit": true,
     "resolveJsonModule": true,
@@ -21,7 +21,7 @@
     ],
     "skipLibCheck": true,
     "strict": true,
-    "target": "ES2023",
+    "target": "esnext",
     "types": [
       "node",
       "vite/client",

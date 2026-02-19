@@ -32,7 +32,7 @@
 		"styled-components": "^6.1.19"
 	},
 	"devDependencies": {
-		"@biomejs/biome": "^2.2.5",
+		"@biomejs/biome": "catalog:",
 		"@strapi/typescript-utils": "5.25.0",
 		"@types/node": "^24.6.2",
 		"@types/pg": "^8.15.5",

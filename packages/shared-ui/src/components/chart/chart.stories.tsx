@@ -130,22 +130,26 @@ export const LineChartExample: Story = {
 						tickFormatter={(value) => `$${value}`}
 					/>
 					<ChartTooltip
-						content={({ active, payload }) => {
-							if (!active || !payload) return null;
-							return (
-								<ChartTooltipContent>
-									{payload.map((item) => (
-										<div
-											key={item.dataKey}
-											className="flex items-center justify-between gap-2"
-										>
-											<span className="text-muted-foreground">{item.name}</span>
-											<span className="font-bold">${item.value}</span>
-										</div>
-									))}
-								</ChartTooltipContent>
-							);
-						}}
+						content={
+							(({
+								active,
+								payload,
+								coordinate,
+								accessibilityLayer,
+								activeIndex,
+							}: any) => {
+								if (!active || !payload) return null;
+								return (
+									<ChartTooltipContent
+										active={active}
+										payload={payload}
+										coordinate={coordinate}
+										accessibilityLayer={accessibilityLayer}
+										activeIndex={activeIndex}
+									/>
+								);
+							}) as any
+						}
 					/>
 					<Line
 						type="monotone"
@@ -200,22 +204,26 @@ export const BarChartExample: Story = {
 						tickFormatter={(value) => `$${value}`}
 					/>
 					<ChartTooltip
-						content={({ active, payload }) => {
-							if (!active || !payload) return null;
-							return (
-								<ChartTooltipContent>
-									{payload.map((item) => (
-										<div
-											key={item.dataKey}
-											className="flex items-center justify-between gap-2"
-										>
-											<span className="text-muted-foreground">{item.name}</span>
-											<span className="font-bold">${item.value}</span>
-										</div>
-									))}
-								</ChartTooltipContent>
-							);
-						}}
+						content={
+							(({
+								active,
+								payload,
+								coordinate,
+								accessibilityLayer,
+								activeIndex,
+							}: any) => {
+								if (!active || !payload) return null;
+								return (
+									<ChartTooltipContent
+										active={active}
+										payload={payload}
+										coordinate={coordinate}
+										accessibilityLayer={accessibilityLayer}
+										activeIndex={activeIndex}
+									/>
+								);
+							}) as any
+						}
 					/>
 					<Bar
 						dataKey="total"
@@ -258,22 +266,26 @@ export const AreaChartExample: Story = {
 						tickFormatter={(value) => `$${value}`}
 					/>
 					<ChartTooltip
-						content={({ active, payload }) => {
-							if (!active || !payload) return null;
-							return (
-								<ChartTooltipContent>
-									{payload.map((item) => (
-										<div
-											key={item.dataKey}
-											className="flex items-center justify-between gap-2"
-										>
-											<span className="text-muted-foreground">{item.name}</span>
-											<span className="font-bold">${item.value}</span>
-										</div>
-									))}
-								</ChartTooltipContent>
-							);
-						}}
+						content={
+							(({
+								active,
+								payload,
+								coordinate,
+								accessibilityLayer,
+								activeIndex,
+							}: any) => {
+								if (!active || !payload) return null;
+								return (
+									<ChartTooltipContent
+										active={active}
+										payload={payload}
+										coordinate={coordinate}
+										accessibilityLayer={accessibilityLayer}
+										activeIndex={activeIndex}
+									/>
+								);
+							}) as any
+						}
 					/>
 					<Area
 						type="monotone"

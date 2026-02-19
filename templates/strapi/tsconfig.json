@@ -14,7 +14,7 @@
 		"rootDir": ".",
 		"skipLibCheck": true,
 		"strict": false,
-		"target": "ES2019"
+		"target": "esnext"
 	},
 	"include": [
 		// Include root files
