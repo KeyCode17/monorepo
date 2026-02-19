@@ -64,6 +64,8 @@ dist-ssr/
 .build
 .react-router
 .wrangler
+.tanstack/
+*.gen.ts
 
 # Vite & Vitest config
 vite.config.*
