@@ -35,7 +35,7 @@ moon generate <template-name>
 Replace `<template-name>` with the name of the template you wish to use (e.g., `react-app`, `go-clean`, `nextjs`).
 
 > [!TIP]
-> You can view a list of all available templates in the [Available Templates](/available-templates) section.
+> You can view a list of all available templates in the [Available Templates]({{< ref "available-templates.md" >}}) section.
 
 ### Example: creating a React App
 
