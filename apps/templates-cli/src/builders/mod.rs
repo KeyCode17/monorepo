@@ -21,8 +21,8 @@ use std::path::{Path, PathBuf};
 use anyhow::{Context, Result, anyhow};
 
 use crate::common::{
-    keep_only, modify_json_file, prepend_to_files_with_ext, rename_ext_to_raw, rename_one_to_raw,
-    replace_in_file, replace_in_files,
+    copy_dir_contents, keep_only, modify_json_file, prepend_to_files_with_ext, rename_ext_to_raw,
+    rename_one_to_raw, replace_in_file, replace_in_files,
 };
 
 /// Context passed to `pre_custom` and `custom` closures.
@@ -132,9 +132,36 @@ pub fn run_builder(name: &str, root: &Path) -> Result<()> {
     apply_spec(spec, root)
 }
 
-/// Run every builder in the registry, in declaration order.
-pub fn run_all(root: &Path) -> Result<()> {
-    for spec in REGISTRY {
+/// The 10 builders invoked by the original `build-templates.sh` orchestrator,
+/// in the exact order it called them.
+///
+/// **`tanstack-start` is intentionally absent.** The bash orchestrator never
+/// invoked `builder/tanstack-start.sh` from `build-templates.sh` — it could
+/// only be run on demand via `bash builder/tanstack-start.sh`. Including
+/// tanstack-start in the default `templates-cli build` set would silently
+/// reformat `templates/tanstack-start/` on every full rebuild, drifting from
+/// the bash baseline. Users who want to scaffold tanstack-start use
+/// `templates-cli builder tanstack-start` explicitly.
+const DEFAULT_BUILD_SET: &[&BuilderSpec] = &[
+    &ASTRO,
+    &EXPO_APP,
+    &FASTAPI_AI,
+    &GO_CLEAN,
+    &GO_MODULAR,
+    &NEXTJS_APP,
+    &REACT_APP,
+    &REACT_SSR,
+    &STRAPI_CMS,
+    &SHARED_UI,
+];
+
+/// Run the default set of 10 builders that the bash `build-templates.sh`
+/// orchestrator invoked, in its declared order.
+///
+/// This is what `templates-cli build` calls. To run a single builder
+/// (including `tanstack-start`), use `templates-cli builder <name>`.
+pub fn run_default_set(root: &Path) -> Result<()> {
+    for spec in DEFAULT_BUILD_SET {
         apply_spec(spec, root)?;
     }
     Ok(())
@@ -566,7 +593,7 @@ fn shared_ui_pre_custom(ctx: &BuildCtx<'_>) -> Result<()> {
             .with_context(|| format!("rm -rf {}", ctx.target.display()))?;
     }
     fs_err::create_dir_all(ctx.target)?;
-    copy_dir_recursive(&src, ctx.target)
+    copy_dir_contents(&src, ctx.target)
         .with_context(|| format!("cp -R {} -> {}", src.display(), ctx.target.display()))?;
 
     // Strip runtime artifacts from the freshly-copied target.
@@ -585,32 +612,6 @@ fn shared_ui_pre_custom(ctx: &BuildCtx<'_>) -> Result<()> {
     {
         if entry.file_type().is_file() && entry.file_name() == std::ffi::OsStr::new(".DS_Store") {
             fs_err::remove_file(entry.path()).ok();
-        }
-    }
-    Ok(())
-}
-
-/// Recursive directory copy. Equivalent to `cp -R src dst`.
-///
-/// Follows `copy_dir_contents` in `commands/build.rs` but with the
-/// destination directory already created by the caller. Symlinks are
-/// followed (matching `cp -R`'s default behavior).
-fn copy_dir_recursive(src: &Path, dst: &Path) -> Result<()> {
-    for entry in fs_err::read_dir(src)? {
-        let entry = entry?;
-        let ty = entry.file_type()?;
-        let from = entry.path();
-        let to = dst.join(entry.file_name());
-        if ty.is_dir() {
-            fs_err::create_dir_all(&to)?;
-            copy_dir_recursive(&from, &to)?;
-        } else if ty.is_file() {
-            fs_err::copy(&from, &to)?;
-        } else if ty.is_symlink() {
-            let target = fs_err::read_link(&from)?;
-            if target.is_file() {
-                fs_err::copy(&from, &to)?;
-            }
         }
     }
     Ok(())
@@ -643,6 +644,47 @@ mod tests {
         names.sort_unstable();
         let unique_count = names.iter().collect::<std::collections::HashSet<_>>().len();
         assert_eq!(unique_count, names.len(), "builder names must be unique");
+    }
+
+    #[test]
+    fn default_build_set_excludes_tanstack_start() {
+        // The bash `build-templates.sh` orchestrator NEVER invoked
+        // `builder/tanstack-start.sh`. The Rust default-build-set must
+        // match that exclusion exactly, or `templates-cli build` would
+        // silently reformat `templates/tanstack-start/` on every run and
+        // drift from the bash baseline.
+        let names: Vec<&str> = DEFAULT_BUILD_SET.iter().map(|s| s.name).collect();
+        assert!(
+            !names.contains(&"tanstack-start"),
+            "tanstack-start must NOT be in the default build set; \
+             it is invoked on demand only via `templates-cli builder tanstack-start`"
+        );
+        assert_eq!(
+            names.len(),
+            10,
+            "default build set must have exactly 10 entries (matches bash orchestrator)"
+        );
+    }
+
+    #[test]
+    fn default_build_set_order_matches_bash_orchestrator() {
+        let expected = [
+            "astro",
+            "expo-app",
+            "fastapi-ai",
+            "go-clean",
+            "go-modular",
+            "nextjs-app",
+            "react-app",
+            "react-ssr",
+            "strapi-cms",
+            "shared-ui",
+        ];
+        let actual: Vec<&str> = DEFAULT_BUILD_SET.iter().map(|s| s.name).collect();
+        assert_eq!(
+            actual, expected,
+            "default build set order must match `build-templates.sh` exactly"
+        );
     }
 
     #[test]

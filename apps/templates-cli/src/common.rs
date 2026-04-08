@@ -245,6 +245,34 @@ where
     Ok(())
 }
 
+/// Recursive copy of every entry in `src` into `dst` — equivalent to
+/// `cp -r "$src/." "$dst/"`.
+///
+/// `dst` must already exist; the caller creates it. Symlinks-to-files are
+/// followed and copied as plain files (matches `cp -r`'s default; neither
+/// `build-templates.sh` nor `builder/shared-ui.sh` use `-P` to preserve
+/// symlinks).
+pub fn copy_dir_contents(src: &Path, dst: &Path) -> Result<()> {
+    for entry in fs_err::read_dir(src)? {
+        let entry = entry?;
+        let ty = entry.file_type()?;
+        let from = entry.path();
+        let to = dst.join(entry.file_name());
+        if ty.is_dir() {
+            fs_err::create_dir_all(&to)?;
+            copy_dir_contents(&from, &to)?;
+        } else if ty.is_file() {
+            fs_err::copy(&from, &to)?;
+        } else if ty.is_symlink() {
+            let target = fs_err::read_link(&from)?;
+            if target.is_file() {
+                fs_err::copy(&from, &to)?;
+            }
+        }
+    }
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

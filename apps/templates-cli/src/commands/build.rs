@@ -24,6 +24,7 @@ use std::process::Command;
 use anyhow::{Context, Result};
 
 use crate::builders;
+use crate::common::copy_dir_contents;
 
 /// Parallel-array source → target mapping from `build-templates.sh`.
 ///
@@ -130,33 +131,9 @@ pub fn run(root: &Path) -> Result<()> {
     tracing::info!("Cleanup completed.");
 
     tracing::info!("Scaffolding templates...");
-    builders::run_all(root)?;
+    builders::run_default_set(root)?;
 
     tracing::info!("All processes completed successfully.");
-    Ok(())
-}
-
-/// Recursive copy of `src/.` into `dst` — equivalent to `cp -r "$src/." "$dst/"`.
-fn copy_dir_contents(src: &Path, dst: &Path) -> Result<()> {
-    for entry in fs_err::read_dir(src)? {
-        let entry = entry?;
-        let ty = entry.file_type()?;
-        let from = entry.path();
-        let to = dst.join(entry.file_name());
-        if ty.is_dir() {
-            fs_err::create_dir_all(&to)?;
-            copy_dir_contents(&from, &to)?;
-        } else if ty.is_file() {
-            fs_err::copy(&from, &to)?;
-        } else if ty.is_symlink() {
-            // Follow-and-copy symlinks to files, matching `cp -r` default.
-            // (cp without -P follows symlinks when copying trees.)
-            let target = fs_err::read_link(&from)?;
-            if target.is_file() {
-                fs_err::copy(&from, &to)?;
-            }
-        }
-    }
     Ok(())
 }
 
