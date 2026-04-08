@@ -135,3 +135,13 @@ TODO.md
 
 # Expo
 .expo
+
+# Rust
+/target/
+**/target/
+
+# oh-my-claudecode session state (local-only)
+.omc/state/
+.omc/project-memory.json
+.omc/notepad.md
+.omc/logs/
