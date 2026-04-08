@@ -5,11 +5,18 @@
 //! near-duplicate Rust files, we express each builder as a [`BuilderSpec`]
 //! and let a generic [`apply_spec`] function execute them all.
 //!
-//! If a template's logic doesn't fit the spec (currently: `go-modular` has
-//! doc/web cleanups, `shared-ui` has a copy-from-packages step), we add
-//! targeted closures via [`BuilderSpec::custom`].
+//! When a template's logic doesn't fit the spec we attach a closure
+//! via [`BuilderSpec::pre_custom`] (runs BEFORE the declarative pipeline)
+//! or [`BuilderSpec::custom`] (runs AFTER). The two current users are:
+//!
+//! - **`go-modular`**: a `custom` pass that cleans `docs/` and `web/`
+//!   after the placeholder/rename steps.
+//! - **`shared-ui`**: a `pre_custom` pass that copies from
+//!   `packages/shared-ui/` into `templates/shared-ui/` (instead of
+//!   from another `templates/` dir) and strips runtime artifacts
+//!   before the standard placeholder/rename flow runs.
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result, anyhow};
 
@@ -17,6 +24,24 @@ use crate::common::{
     keep_only, modify_json_file, prepend_to_files_with_ext, rename_ext_to_raw, rename_one_to_raw,
     replace_in_file, replace_in_files,
 };
+
+/// Context passed to `pre_custom` and `custom` closures.
+///
+/// Holds every path a custom pass is likely to need, so callers don't
+/// have to reconstruct them from a bare `&Path`. All four fields are
+/// borrows of the same lifetime, so the struct is zero-cost.
+pub struct BuildCtx<'a> {
+    /// Monorepo root (the directory containing `apps/`, `templates/`,
+    /// `packages/`, etc.).
+    pub root: &'a Path,
+    /// `<root>/templates` — the directory every template ends up in.
+    pub templates_dir: &'a Path,
+    /// `<root>/packages` — source for the `shared-ui` builder.
+    pub packages_dir: &'a Path,
+    /// `<root>/templates/<target_name>` — the template directory this
+    /// builder is operating on.
+    pub target: &'a Path,
+}
 
 /// Immutable spec for a single template build.
 ///
@@ -70,9 +95,16 @@ pub struct BuilderSpec {
     /// before renaming them. Astro-specific.
     pub astro_frontmatter_prepend: bool,
 
-    /// Optional custom pass, run AFTER all the declarative steps above.
-    /// Receives the absolute target path.
-    pub custom: Option<fn(target: &Path) -> Result<()>>,
+    /// Optional PRE-custom pass, run BEFORE step 1 of `apply_spec`.
+    ///
+    /// Used by `shared-ui` to copy from `packages/shared-ui/` into
+    /// `templates/shared-ui/` (a different source location than the
+    /// standard `templates/<source_name>` lookup).
+    pub pre_custom: Option<fn(ctx: &BuildCtx<'_>) -> Result<()>>,
+
+    /// Optional post-custom pass, run AFTER all the declarative steps.
+    /// Used by `go-modular` for its `docs/` and `web/` directory pruning.
+    pub custom: Option<fn(ctx: &BuildCtx<'_>) -> Result<()>>,
 }
 
 /// The full registry. Order matches the order in `build-templates.sh`.
@@ -111,6 +143,7 @@ pub fn run_all(root: &Path) -> Result<()> {
 /// Execute a [`BuilderSpec`] against a monorepo root.
 ///
 /// The order of operations mirrors the shell-script order EXACTLY:
+/// 0. Pre-custom pass (shared-ui copies from packages/ here)
 /// 1. If source directory exists AND source != target, rename source → target
 /// 2. Replace placeholders in `moon.yml` (source name, description)
 /// 3. Replace port number across all files (except `template.yml`)
@@ -120,13 +153,27 @@ pub fn run_all(root: &Path) -> Result<()> {
 /// 7. File-extension renames (.py → .raw.py, .astro → .raw.astro, etc.)
 /// 8. Single-file renames (.mockery.yml → .mockery.raw.yml, etc.)
 /// 9. Strip `@repo/shared-ui` from package.json + tsconfig.json (if enabled)
-/// 10. Custom pass (if any)
+/// 10. Post-custom pass (go-modular's docs/web cleanup runs here)
 pub fn apply_spec(spec: &BuilderSpec, root: &Path) -> Result<()> {
     tracing::info!("{}", spec.banner);
 
-    let templates_dir = root.join("templates");
+    let templates_dir: PathBuf = root.join("templates");
+    let packages_dir: PathBuf = root.join("packages");
     let source_path = templates_dir.join(spec.source_name);
     let target_path = templates_dir.join(spec.target_name);
+
+    // Step 0: pre-custom pass. Must build a ctx with `target = target_path`
+    // even though target may not exist yet — pre_custom is allowed to
+    // create it (that's the whole point for shared-ui).
+    if let Some(pre_custom) = spec.pre_custom {
+        let ctx = BuildCtx {
+            root,
+            templates_dir: &templates_dir,
+            packages_dir: &packages_dir,
+            target: &target_path,
+        };
+        pre_custom(&ctx)?;
+    }
 
     // Step 1: source → target rename when they differ.
     if source_path.exists() && spec.source_name != spec.target_name {
@@ -176,6 +223,8 @@ pub fn apply_spec(spec: &BuilderSpec, root: &Path) -> Result<()> {
     )?;
 
     // Step 5: description placeholder replacement across all files.
+    // For shared-ui this is a no-op because packages/shared-ui has no
+    // `_CHANGE_ME_DESCRIPTION_` literals (verified 2026-04-08).
     replace_in_files(
         &target_path,
         "_CHANGE_ME_DESCRIPTION_",
@@ -209,9 +258,15 @@ pub fn apply_spec(spec: &BuilderSpec, root: &Path) -> Result<()> {
         strip_shared_ui_from_tsconfig_json(&target_path)?;
     }
 
-    // Step 10: custom pass.
+    // Step 10: post-custom pass.
     if let Some(custom) = spec.custom {
-        custom(&target_path)?;
+        let ctx = BuildCtx {
+            root,
+            templates_dir: &templates_dir,
+            packages_dir: &packages_dir,
+            target: &target_path,
+        };
+        custom(&ctx)?;
     }
 
     Ok(())
@@ -286,6 +341,7 @@ pub const ASTRO: BuilderSpec = BuilderSpec {
     strip_shared_ui_from_package_json: false,
     strip_shared_ui_from_tsconfig_json: false,
     astro_frontmatter_prepend: true,
+    pre_custom: None,
     custom: None,
 };
 
@@ -305,6 +361,7 @@ pub const EXPO_APP: BuilderSpec = BuilderSpec {
     strip_shared_ui_from_package_json: false,
     strip_shared_ui_from_tsconfig_json: false,
     astro_frontmatter_prepend: false,
+    pre_custom: None,
     custom: None,
 };
 
@@ -320,6 +377,7 @@ pub const FASTAPI_AI: BuilderSpec = BuilderSpec {
     strip_shared_ui_from_package_json: false,
     strip_shared_ui_from_tsconfig_json: false,
     astro_frontmatter_prepend: false,
+    pre_custom: None,
     custom: None,
 };
 
@@ -336,6 +394,7 @@ pub const GO_CLEAN: BuilderSpec = BuilderSpec {
     strip_shared_ui_from_package_json: false,
     strip_shared_ui_from_tsconfig_json: false,
     astro_frontmatter_prepend: false,
+    pre_custom: None,
     custom: None,
 };
 
@@ -352,19 +411,20 @@ pub const GO_MODULAR: BuilderSpec = BuilderSpec {
     strip_shared_ui_from_package_json: false,
     strip_shared_ui_from_tsconfig_json: false,
     astro_frontmatter_prepend: false,
+    pre_custom: None,
     custom: Some(go_modular_custom),
 };
 
-fn go_modular_custom(target: &Path) -> Result<()> {
+fn go_modular_custom(ctx: &BuildCtx<'_>) -> Result<()> {
     // Rename templates/emails/*.html to *.raw.html (only that subdirectory).
-    let emails = target.join("templates/emails");
+    let emails = ctx.target.join("templates/emails");
     if emails.exists() {
         rename_ext_to_raw(&emails, "html")?;
     }
     // Keep only docs/embed.go
-    keep_only(&target.join("docs"), &["embed.go"])?;
+    keep_only(&ctx.target.join("docs"), &["embed.go"])?;
     // Keep only web/embed.go and web/static/index.html
-    keep_only(&target.join("web"), &["embed.go", "static/index.html"])?;
+    keep_only(&ctx.target.join("web"), &["embed.go", "static/index.html"])?;
     Ok(())
 }
 
@@ -380,6 +440,7 @@ pub const NEXTJS_APP: BuilderSpec = BuilderSpec {
     strip_shared_ui_from_package_json: true,
     strip_shared_ui_from_tsconfig_json: true,
     astro_frontmatter_prepend: false,
+    pre_custom: None,
     custom: None,
 };
 
@@ -395,6 +456,7 @@ pub const REACT_APP: BuilderSpec = BuilderSpec {
     strip_shared_ui_from_package_json: true,
     strip_shared_ui_from_tsconfig_json: true,
     astro_frontmatter_prepend: false,
+    pre_custom: None,
     custom: None,
 };
 
@@ -410,6 +472,7 @@ pub const REACT_SSR: BuilderSpec = BuilderSpec {
     strip_shared_ui_from_package_json: true,
     strip_shared_ui_from_tsconfig_json: true,
     astro_frontmatter_prepend: false,
+    pre_custom: None,
     custom: None,
 };
 
@@ -427,6 +490,7 @@ pub const STRAPI_CMS: BuilderSpec = BuilderSpec {
     strip_shared_ui_from_package_json: true,
     strip_shared_ui_from_tsconfig_json: false,
     astro_frontmatter_prepend: false,
+    pre_custom: None,
     custom: None,
 };
 
@@ -443,12 +507,16 @@ pub const TANSTACK_START: BuilderSpec = BuilderSpec {
     strip_shared_ui_from_package_json: true,
     strip_shared_ui_from_tsconfig_json: true,
     astro_frontmatter_prepend: false,
+    pre_custom: None,
     custom: None,
 };
 
 /// `builder/shared-ui.sh`: special — copies from `packages/shared-ui` into
-/// `templates/shared-ui`, cleans `node_modules/dist`, renames .tsx/.mdx to
-/// their `.raw.*` variants.
+/// `templates/shared-ui`, strips runtime artifacts, then runs the standard
+/// placeholder/rename pipeline (which handles `.tsx`/`.mdx` → `.raw.*`).
+///
+/// The copy step is wired through `pre_custom` so it runs BEFORE step 1
+/// of `apply_spec`. The standard pipeline handles everything else.
 pub const SHARED_UI: BuilderSpec = BuilderSpec {
     name: "shared-ui",
     source_name: "shared-ui",
@@ -460,22 +528,91 @@ pub const SHARED_UI: BuilderSpec = BuilderSpec {
     strip_shared_ui_from_package_json: false,
     strip_shared_ui_from_tsconfig_json: false,
     astro_frontmatter_prepend: false,
-    custom: Some(shared_ui_custom),
+    pre_custom: Some(shared_ui_pre_custom),
+    custom: None,
 };
 
-#[allow(clippy::unnecessary_wraps)] // signature must match BuilderSpec::custom
-fn shared_ui_custom(_target: &Path) -> Result<()> {
-    // The bash script for shared-ui has additional copy-from-packages
-    // semantics that require access to the root (not just target). Phase A
-    // will land a follow-up task to wire this custom pass through the
-    // monorepo root — for now we log a warning and return Ok so the
-    // builder pipeline still runs end-to-end against the rest of the
-    // templates.
-    tracing::warn!(
-        "shared-ui builder custom pass not yet implemented \
-         (copy from packages/shared-ui and deep cleanup); \
-         follow-up Task A-SU-1 in the ralplan"
-    );
+/// Cleanup entries removed from `templates/shared-ui/` after copy.
+///
+/// Mirrors the `rm -rf` calls in `builder/shared-ui.sh` exactly. Note
+/// that `storybook-static` is specific to shared-ui and is NOT in the
+/// general `CLEANUP_ENTRIES` list in `commands/build.rs`.
+const SHARED_UI_CLEANUP_ENTRIES: &[&str] = &["node_modules", "storybook-static", "dist", "build"];
+
+/// `pre_custom` pass for shared-ui.
+///
+/// Mirrors the first half of `builder/shared-ui.sh`:
+/// 1. Remove any existing `templates/shared-ui/`
+/// 2. Recursively copy `packages/shared-ui/` → `templates/shared-ui/`
+/// 3. Strip runtime artifacts (`node_modules`, `storybook-static`, `dist`,
+///    `build`, plus the `.DS_Store` find-and-delete pass)
+///
+/// After this runs, `apply_spec` continues with its standard pipeline
+/// (step 1 source/target rename is a no-op because both names equal
+/// "shared-ui", step 2+ do the placeholder replacement and .tsx/.mdx
+/// renames).
+fn shared_ui_pre_custom(ctx: &BuildCtx<'_>) -> Result<()> {
+    let src = ctx.packages_dir.join("shared-ui");
+    if !src.is_dir() {
+        tracing::warn!(
+            "shared-ui source {} does not exist, skipping",
+            src.display()
+        );
+        return Ok(());
+    }
+
+    if ctx.target.exists() {
+        fs_err::remove_dir_all(ctx.target)
+            .with_context(|| format!("rm -rf {}", ctx.target.display()))?;
+    }
+    fs_err::create_dir_all(ctx.target)?;
+    copy_dir_recursive(&src, ctx.target)
+        .with_context(|| format!("cp -R {} -> {}", src.display(), ctx.target.display()))?;
+
+    // Strip runtime artifacts from the freshly-copied target.
+    for entry in SHARED_UI_CLEANUP_ENTRIES {
+        let victim = ctx.target.join(entry);
+        if victim.is_dir() {
+            fs_err::remove_dir_all(&victim).ok();
+        } else if victim.is_file() {
+            fs_err::remove_file(&victim).ok();
+        }
+    }
+    // `find "$TARGET_PATH" -type f -name ".DS_Store" -delete`
+    for entry in walkdir::WalkDir::new(ctx.target)
+        .into_iter()
+        .filter_map(std::result::Result::ok)
+    {
+        if entry.file_type().is_file() && entry.file_name() == std::ffi::OsStr::new(".DS_Store") {
+            fs_err::remove_file(entry.path()).ok();
+        }
+    }
+    Ok(())
+}
+
+/// Recursive directory copy. Equivalent to `cp -R src dst`.
+///
+/// Follows `copy_dir_contents` in `commands/build.rs` but with the
+/// destination directory already created by the caller. Symlinks are
+/// followed (matching `cp -R`'s default behavior).
+fn copy_dir_recursive(src: &Path, dst: &Path) -> Result<()> {
+    for entry in fs_err::read_dir(src)? {
+        let entry = entry?;
+        let ty = entry.file_type()?;
+        let from = entry.path();
+        let to = dst.join(entry.file_name());
+        if ty.is_dir() {
+            fs_err::create_dir_all(&to)?;
+            copy_dir_recursive(&from, &to)?;
+        } else if ty.is_file() {
+            fs_err::copy(&from, &to)?;
+        } else if ty.is_symlink() {
+            let target = fs_err::read_link(&from)?;
+            if target.is_file() {
+                fs_err::copy(&from, &to)?;
+            }
+        }
+    }
     Ok(())
 }
 
