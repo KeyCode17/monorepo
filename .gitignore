@@ -141,7 +141,10 @@ TODO.md
 **/target/
 
 # oh-my-claudecode session state (local-only)
-.omc/state/
-.omc/project-memory.json
-.omc/notepad.md
-.omc/logs/
+# Match `.omc` state directories anywhere in the tree, not only at the
+# repo root, because OMC tools may initialize state in subdirectory
+# working dirs (e.g., apps/*/.omc/state/ after a `cd apps/foo && uv run`).
+**/.omc/state/
+**/.omc/project-memory.json
+**/.omc/notepad.md
+**/.omc/logs/
