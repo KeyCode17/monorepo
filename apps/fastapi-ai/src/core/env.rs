@@ -2,6 +2,16 @@
 //!
 //! Mirrors `app/core/env.py` field-for-field. Loaded once at startup
 //! via figment + dotenvy and threaded through `AppState`.
+//!
+//! **Figment env key convention**: `figment::providers::Env::raw()`
+//! automatically lowercases every environment variable name before
+//! deserializing, so `ML_PREFIX_API` (the shell env key) becomes
+//! `ml_prefix_api` (the struct field). We rely on this default so the
+//! Rust struct can use idiomatic snake_case field names without any
+//! `#[serde(rename = "...")]` noise. The Python service uses
+//! UPPER_SNAKE as its env var names (via pydantic-settings) and the
+//! shell/`.env` files use UPPER_SNAKE too — figment's lowercase
+//! transform bridges those conventions transparently.
 
 use anyhow::Result;
 use figment::Figment;
@@ -10,7 +20,7 @@ use serde::Deserialize;
 
 /// Application settings, populated from env vars.
 ///
-/// Field names mirror the Python `Env` class:
+/// Env var mapping (figment lowercases the shell key automatically):
 /// - `ML_PREFIX_API` → `ml_prefix_api`
 /// - `APP_NAME` → `app_name` (default `"fastapi-ai"`)
 /// - `APP_ENVIRONMENT` → `app_environment` (default `"development"`)
@@ -19,22 +29,16 @@ use serde::Deserialize;
 /// - `OTEL_EXPORTER_OTLP_ENDPOINT` → `otel_exporter_otlp_endpoint`
 #[derive(Debug, Clone, Deserialize)]
 pub struct Env {
-    #[serde(rename = "ML_PREFIX_API")]
     pub ml_prefix_api: String,
 
-    #[serde(rename = "APP_NAME", default = "default_app_name")]
+    #[serde(default = "default_app_name")]
     pub app_name: String,
 
-    #[serde(rename = "APP_ENVIRONMENT", default = "default_app_environment")]
+    #[serde(default = "default_app_environment")]
     pub app_environment: String,
 
-    #[serde(rename = "DATABASE_URL")]
     pub database_url: String,
-
-    #[serde(rename = "OPENAI_API_KEY")]
     pub openai_api_key: String,
-
-    #[serde(rename = "OTEL_EXPORTER_OTLP_ENDPOINT")]
     pub otel_exporter_otlp_endpoint: String,
 }
 
