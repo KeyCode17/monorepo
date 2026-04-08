@@ -84,9 +84,15 @@ jobs:
           key: hugo-${{ github.run_id }}
           restore-keys:
             hugo-
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+      - name: Rust build cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: "."
       - name: Build the site
         run: |
-          bash ./makezip.sh
+          cargo run -p templates-cli --release -- all
           hugo --config hugo.yaml --gc --minify \
             --cacheDir "${{ runner.temp }}/hugo_cache" \
             --baseURL "${{ steps.pages.outputs.base_url }}/"
