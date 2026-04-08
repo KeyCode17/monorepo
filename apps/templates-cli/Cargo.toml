@@ -25,9 +25,6 @@ serde_json         = { workspace = true }
 walkdir            = { workspace = true }
 fs-err             = { workspace = true }
 zip                = { workspace = true }
-sha2               = { workspace = true }
-hex                = { workspace = true }
-regex              = { workspace = true }
 glob               = { workspace = true }
 chrono             = { workspace = true }
 indexmap           = { workspace = true }

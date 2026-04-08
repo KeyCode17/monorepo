@@ -8,8 +8,6 @@
 use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result, anyhow};
-use regex::Regex;
-use sha2::{Digest, Sha256};
 use walkdir::WalkDir;
 
 /// File names that are NEVER touched by placeholder replacement.
@@ -247,47 +245,6 @@ where
     Ok(())
 }
 
-/// Regex-based replacement in a single file.
-///
-/// Used for edge cases where simple `.replace(needle, replacement)` is
-/// insufficient (e.g., when the needle must match word boundaries). The
-/// bash pipeline doesn't use this pattern today, but exposing it keeps the
-/// builder table flexible for future additions.
-pub fn regex_replace_in_file(path: &Path, pattern: &Regex, replacement: &str) -> Result<()> {
-    if !path.exists() {
-        return Ok(());
-    }
-    let original = fs_err::read_to_string(path)?;
-    let replaced = pattern.replace_all(&original, replacement);
-    if replaced != original {
-        fs_err::write(path, replaced.as_ref())?;
-    }
-    Ok(())
-}
-
-/// Compute the SHA-256 of a file and return it as a lowercase hex string.
-///
-/// Used for the canonical-equivalence manifest that proves templates-cli
-/// output matches the bash baseline per file.
-pub fn sha256_hex(path: &Path) -> Result<String> {
-    let bytes = fs_err::read(path)?;
-    let digest = Sha256::digest(&bytes);
-    Ok(hex::encode(digest))
-}
-
-/// Build a `<sorted_relative_path>  <sha256_hex>` manifest for every file
-/// under `root`. The output is stable across runs and platforms.
-pub fn sha256_manifest(root: &Path) -> Result<String> {
-    use std::fmt::Write as _;
-    let mut out = String::new();
-    for path in walk_files_sorted(root)? {
-        let rel = path.strip_prefix(root).unwrap_or(&path);
-        let hex = sha256_hex(&path)?;
-        writeln!(out, "{hex}  {}", rel.display()).expect("writing to String never fails");
-    }
-    Ok(out)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -393,17 +350,5 @@ mod tests {
         assert!(after["dependencies"].get("@repo/shared-ui").is_none());
         assert_eq!(after["dependencies"]["react"], "18");
         assert_eq!(after["dependencies"]["z-last"], "1");
-    }
-
-    #[test]
-    fn sha256_hex_is_stable() {
-        let dir = tempdir().unwrap();
-        let path = dir.path().join("a.txt");
-        fs_err::write(&path, b"hello world").unwrap();
-        let h = sha256_hex(&path).unwrap();
-        assert_eq!(
-            h,
-            "b94d27b9934d3e08a52e52d7da7dabfac484efe37a5380ee9088f7ace2efcde9"
-        );
     }
 }
