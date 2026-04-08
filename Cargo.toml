@@ -74,6 +74,16 @@ insta       = "1.47.2"
 rstest      = "0.23"
 pretty_assertions = "1.4"
 reqwest     = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+# testcontainers 0.27.2 is the base runtime; testcontainers-modules 0.15.0
+# is the community module crate that re-exports it at an aligned version.
+# Both were verified on docs.rs on 2026-04-09. The postgres feature enables
+# the Postgres image module used by the fastapi-ai golden tests.
+testcontainers = "0.27.2"
+testcontainers-modules = { version = "0.15.0", features = ["postgres"] }
+# wiremock 0.6.5 — HTTP mock server for black-box testing. Used to mock
+# the OpenAI chat completions endpoint in the fastapi-ai golden tests
+# so they don't hit a real API key. Verified on docs.rs on 2026-04-09.
+wiremock    = "0.6.5"
 
 [profile.release]
 codegen-units = 1
