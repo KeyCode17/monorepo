@@ -123,9 +123,15 @@ fn zip_directory(templates_dir: &Path, name: &str, out_path: &Path) -> Result<()
     }
     let writer = fs_err::File::create(out_path)?;
     let mut zip = zip::ZipWriter::new(writer);
-    let options = SimpleFileOptions::default()
+    // Files go in as 0o644 (rw-r--r--), directories as 0o755 (rwxr-xr-x).
+    // If directories are set to 0o644 they cannot be entered on extract,
+    // which silently breaks any consumer that tries to `cd` into them.
+    let file_options = SimpleFileOptions::default()
         .compression_method(CompressionMethod::Stored)
         .unix_permissions(0o644);
+    let dir_options = SimpleFileOptions::default()
+        .compression_method(CompressionMethod::Stored)
+        .unix_permissions(0o755);
 
     // Collect + sort entries for deterministic archive order.
     let mut entries: Vec<_> = WalkDir::new(&src)
@@ -149,9 +155,9 @@ fn zip_directory(templates_dir: &Path, name: &str, out_path: &Path) -> Result<()
         if entry.file_type().is_dir() {
             // Emit an explicit directory entry. The top-level directory
             // `<name>/` is included so unzipping yields the right layout.
-            zip.add_directory(format!("{rel_str}/"), options)?;
+            zip.add_directory(format!("{rel_str}/"), dir_options)?;
         } else if entry.file_type().is_file() {
-            zip.start_file(rel_str, options)?;
+            zip.start_file(rel_str, file_options)?;
             let contents = fs_err::read(path)?;
             zip.write_all(&contents)?;
         }

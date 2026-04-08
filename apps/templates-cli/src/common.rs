@@ -350,34 +350,49 @@ mod tests {
         let dir = tempdir().unwrap();
         let root = dir.path();
         fs_err::write(root.join("i.astro"), "<h1>hi</h1>").unwrap();
-        prepend_to_files_with_ext(root, "astro", "---\nforce: true\n---\n").unwrap();
+        // Matches what bash echo -e "---\nforce: true\n---\n" produces
+        // (4 newlines: 3 from \n escapes + 1 from echo's own trailer).
+        let prefix = "---\nforce: true\n---\n\n";
+        prepend_to_files_with_ext(root, "astro", prefix).unwrap();
         let after = fs_err::read_to_string(root.join("i.astro")).unwrap();
-        assert_eq!(after, "---\nforce: true\n---\n<h1>hi</h1>");
-        prepend_to_files_with_ext(root, "astro", "---\nforce: true\n---\n").unwrap();
+        assert_eq!(after, "---\nforce: true\n---\n\n<h1>hi</h1>");
+        prepend_to_files_with_ext(root, "astro", prefix).unwrap();
         let after2 = fs_err::read_to_string(root.join("i.astro")).unwrap();
         assert_eq!(after, after2, "prepend must be idempotent");
     }
 
     #[test]
-    fn modify_json_file_preserves_shape() {
+    fn modify_json_file_preserves_shape_and_key_order() {
         let dir = tempdir().unwrap();
         let path = dir.path().join("package.json");
+        // Use 3 keys so we can observe whether the key order is preserved
+        // after the removal. With default `Map::remove` + `preserve_order`,
+        // the behavior is `swap_remove`, which would move `z-last` into
+        // position 0. We assert the original order is preserved via
+        // `shift_remove`.
         fs_err::write(
             &path,
-            r#"{"name":"x","dependencies":{"@repo/shared-ui":"*","react":"18"}}"#,
+            r#"{"dependencies":{"@repo/shared-ui":"*","react":"18","z-last":"1"}}"#,
         )
         .unwrap();
         modify_json_file(&path, |v| {
             if let Some(deps) = v.get_mut("dependencies").and_then(|d| d.as_object_mut()) {
-                deps.remove("@repo/shared-ui");
+                deps.shift_remove("@repo/shared-ui");
             }
             Ok(())
         })
         .unwrap();
-        let after: serde_json::Value =
-            serde_json::from_str(&fs_err::read_to_string(&path).unwrap()).unwrap();
+        let after_text = fs_err::read_to_string(&path).unwrap();
+        let react_pos = after_text.find("\"react\"").unwrap();
+        let zlast_pos = after_text.find("\"z-last\"").unwrap();
+        assert!(
+            react_pos < zlast_pos,
+            "react must come BEFORE z-last (insertion order preserved): {after_text}"
+        );
+        let after: serde_json::Value = serde_json::from_str(&after_text).unwrap();
         assert!(after["dependencies"].get("@repo/shared-ui").is_none());
         assert_eq!(after["dependencies"]["react"], "18");
+        assert_eq!(after["dependencies"]["z-last"], "1");
     }
 
     #[test]

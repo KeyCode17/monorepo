@@ -52,10 +52,19 @@ pub struct BuilderSpec {
     /// `.mockery.yml` → `.mockery.raw.yml` and specific test files.
     pub rename_single_files: &'static [&'static str],
 
-    /// Whether to remove `@repo/shared-ui` from `package.json` and
-    /// `tsconfig.json` via JSON surgery. Corresponds to the 5 frontend
-    /// builders that currently `jq` this out.
-    pub strip_shared_ui_refs: bool,
+    /// Whether to remove `@repo/shared-ui` from `package.json` via JSON
+    /// surgery. Set for every frontend builder that currently `jq`-deletes
+    /// it from package.json (react-app, react-ssr, nextjs-app, strapi-cms,
+    /// tanstack-start — five builders).
+    pub strip_shared_ui_from_package_json: bool,
+
+    /// Whether to remove the `../../packages/shared-ui` entry from
+    /// `tsconfig.json`'s `references` array. Set for every frontend builder
+    /// that currently `jq`-filters this out. **Not** set for `strapi-cms`
+    /// — strapi's tsconfig.json is JSONC (has comments) and the bash
+    /// script intentionally never touches it, so we match that exactly
+    /// (four builders: react-app, react-ssr, nextjs-app, tanstack-start).
+    pub strip_shared_ui_from_tsconfig_json: bool,
 
     /// Whether to prepend `---\nforce: true\n---\n` to `.astro` files
     /// before renaming them. Astro-specific.
@@ -174,8 +183,12 @@ pub fn apply_spec(spec: &BuilderSpec, root: &Path) -> Result<()> {
     )?;
 
     // Step 6: astro frontmatter prepend (must run BEFORE the .astro rename).
+    // The bash script uses `echo -e "---\nforce: true\n---\n"` which emits
+    // `---\nforce: true\n---\n` plus an extra trailing newline from echo
+    // itself, giving a total of 4 newlines (blank line after the second
+    // `---`). We must match that exactly.
     if spec.astro_frontmatter_prepend {
-        prepend_to_files_with_ext(&target_path, "astro", "---\nforce: true\n---\n")?;
+        prepend_to_files_with_ext(&target_path, "astro", "---\nforce: true\n---\n\n")?;
     }
 
     // Step 7: file-extension renames.
@@ -188,9 +201,12 @@ pub fn apply_spec(spec: &BuilderSpec, root: &Path) -> Result<()> {
         rename_one_to_raw(&target_path.join(rel))?;
     }
 
-    // Step 9: strip @repo/shared-ui references.
-    if spec.strip_shared_ui_refs {
-        strip_shared_ui(&target_path)?;
+    // Step 9: strip @repo/shared-ui references (package.json and/or tsconfig.json).
+    if spec.strip_shared_ui_from_package_json {
+        strip_shared_ui_from_package_json(&target_path)?;
+    }
+    if spec.strip_shared_ui_from_tsconfig_json {
+        strip_shared_ui_from_tsconfig_json(&target_path)?;
     }
 
     // Step 10: custom pass.
@@ -201,34 +217,44 @@ pub fn apply_spec(spec: &BuilderSpec, root: &Path) -> Result<()> {
     Ok(())
 }
 
-/// Remove `@repo/shared-ui` references from `package.json` and `tsconfig.json`.
+/// Remove `@repo/shared-ui` from `package.json`'s `.dependencies` (and
+/// `.devDependencies` as a safety net — some frontends keep it there).
 ///
-/// Mirrors the `jq` invocations in the 5 frontend builders. Handles three
-/// locations the shared-ui key can appear in:
+/// Mirrors the `jq` invocation present in every frontend builder:
+/// `jq 'if .dependencies then .dependencies |= del(.["@repo/shared-ui"]) else . end'`.
 ///
-/// - `package.json`: `.dependencies["@repo/shared-ui"]`
-/// - `tsconfig.json`: `.references[] | select(.path == "../../packages/shared-ui")`
-/// - `package.json` (tanstack variant): `.dependencies["@repo/shared-ui"]`
-///
-/// All three are handled with defensive access so the builder is idempotent.
-fn strip_shared_ui(target: &Path) -> Result<()> {
+/// IMPORTANT: uses `shift_remove` instead of `remove` so the insertion
+/// order of the remaining keys is preserved. With the `preserve_order`
+/// feature enabled on `serde_json`, the default `Map::remove` uses
+/// `swap_remove` which swaps the LAST element into the removed slot,
+/// silently reordering the keys. `jq del(.[...])` preserves order, so
+/// we must match that behavior to stay canonical-equivalent.
+fn strip_shared_ui_from_package_json(target: &Path) -> Result<()> {
     let package_json = target.join("package.json");
     modify_json_file(&package_json, |value| {
         if let Some(deps) = value
             .get_mut("dependencies")
             .and_then(|d| d.as_object_mut())
         {
-            deps.remove("@repo/shared-ui");
+            deps.shift_remove("@repo/shared-ui");
         }
         if let Some(deps) = value
             .get_mut("devDependencies")
             .and_then(|d| d.as_object_mut())
         {
-            deps.remove("@repo/shared-ui");
+            deps.shift_remove("@repo/shared-ui");
         }
         Ok(())
     })?;
+    Ok(())
+}
 
+/// Remove `../../packages/shared-ui` from `tsconfig.json`'s `.references`.
+///
+/// Mirrors `jq 'if .references then .references |= map(select(.path != "../../packages/shared-ui")) else . end'`.
+/// Strapi-cms intentionally does NOT use this because its tsconfig.json is
+/// JSONC (has `//` comments) and the bash script never touches it.
+fn strip_shared_ui_from_tsconfig_json(target: &Path) -> Result<()> {
     let tsconfig_json = target.join("tsconfig.json");
     modify_json_file(&tsconfig_json, |value| {
         if let Some(refs) = value.get_mut("references").and_then(|r| r.as_array_mut()) {
@@ -257,7 +283,8 @@ pub const ASTRO: BuilderSpec = BuilderSpec {
     default_port: Some("4321"),
     rename_exts_to_raw: &["astro"],
     rename_single_files: &[],
-    strip_shared_ui_refs: false,
+    strip_shared_ui_from_package_json: false,
+    strip_shared_ui_from_tsconfig_json: false,
     astro_frontmatter_prepend: true,
     custom: None,
 };
@@ -275,7 +302,8 @@ pub const EXPO_APP: BuilderSpec = BuilderSpec {
     default_port: None,
     rename_exts_to_raw: &[],
     rename_single_files: &[],
-    strip_shared_ui_refs: false,
+    strip_shared_ui_from_package_json: false,
+    strip_shared_ui_from_tsconfig_json: false,
     astro_frontmatter_prepend: false,
     custom: None,
 };
@@ -289,7 +317,8 @@ pub const FASTAPI_AI: BuilderSpec = BuilderSpec {
     default_port: Some("8080"),
     rename_exts_to_raw: &["py"],
     rename_single_files: &[],
-    strip_shared_ui_refs: false,
+    strip_shared_ui_from_package_json: false,
+    strip_shared_ui_from_tsconfig_json: false,
     astro_frontmatter_prepend: false,
     custom: None,
 };
@@ -304,7 +333,8 @@ pub const GO_CLEAN: BuilderSpec = BuilderSpec {
     default_port: Some("8000"),
     rename_exts_to_raw: &[],
     rename_single_files: &[".mockery.yml"],
-    strip_shared_ui_refs: false,
+    strip_shared_ui_from_package_json: false,
+    strip_shared_ui_from_tsconfig_json: false,
     astro_frontmatter_prepend: false,
     custom: None,
 };
@@ -319,7 +349,8 @@ pub const GO_MODULAR: BuilderSpec = BuilderSpec {
     default_port: Some("8000"),
     rename_exts_to_raw: &[],
     rename_single_files: &[".mockery.yml", "internal/notification/mailer_test.go"],
-    strip_shared_ui_refs: false,
+    strip_shared_ui_from_package_json: false,
+    strip_shared_ui_from_tsconfig_json: false,
     astro_frontmatter_prepend: false,
     custom: Some(go_modular_custom),
 };
@@ -346,7 +377,8 @@ pub const NEXTJS_APP: BuilderSpec = BuilderSpec {
     default_port: Some("3200"),
     rename_exts_to_raw: &[],
     rename_single_files: &[],
-    strip_shared_ui_refs: true,
+    strip_shared_ui_from_package_json: true,
+    strip_shared_ui_from_tsconfig_json: true,
     astro_frontmatter_prepend: false,
     custom: None,
 };
@@ -360,7 +392,8 @@ pub const REACT_APP: BuilderSpec = BuilderSpec {
     default_port: Some("3000"),
     rename_exts_to_raw: &[],
     rename_single_files: &[],
-    strip_shared_ui_refs: true,
+    strip_shared_ui_from_package_json: true,
+    strip_shared_ui_from_tsconfig_json: true,
     astro_frontmatter_prepend: false,
     custom: None,
 };
@@ -374,12 +407,15 @@ pub const REACT_SSR: BuilderSpec = BuilderSpec {
     default_port: Some("3100"),
     rename_exts_to_raw: &[],
     rename_single_files: &[],
-    strip_shared_ui_refs: true,
+    strip_shared_ui_from_package_json: true,
+    strip_shared_ui_from_tsconfig_json: true,
     astro_frontmatter_prepend: false,
     custom: None,
 };
 
-/// `builder/strapi-cms.sh`: strapi-cms → strapi, port 1337, strip shared-ui.
+/// `builder/strapi-cms.sh`: strapi-cms → strapi, port 1337, strip shared-ui
+/// from `package.json` ONLY. Strapi's `tsconfig.json` is JSONC (has `//`
+/// comments) and the bash script intentionally never touches it.
 pub const STRAPI_CMS: BuilderSpec = BuilderSpec {
     name: "strapi-cms",
     source_name: "strapi-cms",
@@ -388,7 +424,8 @@ pub const STRAPI_CMS: BuilderSpec = BuilderSpec {
     default_port: Some("1337"),
     rename_exts_to_raw: &[],
     rename_single_files: &[],
-    strip_shared_ui_refs: true,
+    strip_shared_ui_from_package_json: true,
+    strip_shared_ui_from_tsconfig_json: false,
     astro_frontmatter_prepend: false,
     custom: None,
 };
@@ -403,7 +440,8 @@ pub const TANSTACK_START: BuilderSpec = BuilderSpec {
     default_port: Some("3300"),
     rename_exts_to_raw: &[],
     rename_single_files: &[],
-    strip_shared_ui_refs: true,
+    strip_shared_ui_from_package_json: true,
+    strip_shared_ui_from_tsconfig_json: true,
     astro_frontmatter_prepend: false,
     custom: None,
 };
@@ -419,7 +457,8 @@ pub const SHARED_UI: BuilderSpec = BuilderSpec {
     default_port: None,
     rename_exts_to_raw: &["tsx", "mdx"],
     rename_single_files: &[],
-    strip_shared_ui_refs: false,
+    strip_shared_ui_from_package_json: false,
+    strip_shared_ui_from_tsconfig_json: false,
     astro_frontmatter_prepend: false,
     custom: Some(shared_ui_custom),
 };
@@ -470,16 +509,42 @@ mod tests {
     }
 
     #[test]
-    fn frontend_builders_strip_shared_ui() {
+    fn frontend_builders_strip_shared_ui_from_package_json() {
+        // All 5 frontend builders strip @repo/shared-ui from package.json.
         for spec in REGISTRY {
             if matches!(
                 spec.name,
                 "react-app" | "react-ssr" | "nextjs-app" | "strapi-cms" | "tanstack-start"
             ) {
                 assert!(
-                    spec.strip_shared_ui_refs,
-                    "{} must strip @repo/shared-ui refs",
+                    spec.strip_shared_ui_from_package_json,
+                    "{} must strip @repo/shared-ui from package.json",
                     spec.name
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn strapi_does_not_touch_tsconfig_json() {
+        // Strapi's tsconfig.json is JSONC (has comments) and the bash
+        // script intentionally never touches it. Only react-app, react-ssr,
+        // nextjs-app, and tanstack-start strip @repo/shared-ui from
+        // tsconfig.json — NOT strapi-cms.
+        let frontends_that_touch_tsconfig =
+            ["react-app", "react-ssr", "nextjs-app", "tanstack-start"];
+        for spec in REGISTRY {
+            if frontends_that_touch_tsconfig.contains(&spec.name) {
+                assert!(
+                    spec.strip_shared_ui_from_tsconfig_json,
+                    "{} must strip @repo/shared-ui from tsconfig.json",
+                    spec.name
+                );
+            }
+            if spec.name == "strapi-cms" {
+                assert!(
+                    !spec.strip_shared_ui_from_tsconfig_json,
+                    "strapi-cms must NOT touch tsconfig.json (JSONC, bash skips it)"
                 );
             }
         }
