@@ -31,6 +31,16 @@ impl Database {
         Ok(Self { pool })
     }
 
+    /// Construct from an existing `PgPool`.
+    ///
+    /// Used by integration tests that get their pool from a
+    /// testcontainer-managed Postgres instance instead of booting
+    /// from a `DATABASE_URL`.
+    #[must_use]
+    pub fn from_pool(pool: PgPool) -> Self {
+        Self { pool }
+    }
+
     pub fn pool(&self) -> &PgPool {
         &self.pool
     }
