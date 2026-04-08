@@ -1,0 +1,9 @@
+edition = "2024"
+max_width = 100
+use_small_heuristics = "Default"
+reorder_imports = true
+reorder_modules = true
+newline_style = "Unix"
+# Stable-only options above. Nightly-only options (`imports_granularity = Crate`,
+# `group_imports = StdExternalCrate`) are omitted intentionally so
+# `cargo fmt` runs clean on stable.

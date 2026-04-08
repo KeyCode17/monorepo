@@ -1,0 +1,6 @@
+[toolchain]
+# Pinned during Phase A kickoff (2026-04-08). Bump as needed but re-verify
+# workspace crates' MSRV against docs.rs before upgrading.
+channel = "stable"
+components = ["rustfmt", "clippy", "rust-src"]
+profile = "default"

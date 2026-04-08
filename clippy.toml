@@ -1,0 +1,8 @@
+# Workspace-wide clippy configuration.
+# Main lint levels live in Cargo.toml [workspace.lints.clippy].
+
+avoid-breaking-exported-api = false
+msrv = "1.90"
+
+# Allow common short names the templating domain uses.
+allowed-idents-below-min-chars = ["id", "ok", "tx", "rx", "fs", "io", "os"]
