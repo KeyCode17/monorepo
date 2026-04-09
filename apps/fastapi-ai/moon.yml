@@ -2,12 +2,9 @@
 # yaml-language-server: $schema=https://moonrepo.dev/schemas/project.json
 $schema: "https://moonrepo.dev/schemas/project.json"
 
-# Phase B: this project is now a Rust crate. moon doesn't have a
-# first-class rust toolchain entry, so the language is "unknown" and
-# tasks shell out to cargo directly.
-layer: application
-language: unknown
-tags: ["app", "rust"]
+layer: library
+language: python
+tags: ["app"]
 
 # Overrides the name (identifier) of the project
 id: "fastapi-ai"
@@ -16,87 +13,90 @@ project:
   title: "fastapi-ai"
   description: "_CHANGE_ME_DESCRIPTION_"
 
+# Since this project can infer task from script (package.json), then you can run any script as moon task.
+# @see: https://moonrepo.dev/api/types/interface/NodeConfig#inferTasksFromScripts
+# Example: `moon fastapi-ai:start`
 tasks:
-  # Build the binary in dev mode for fast iteration.
-  build:
-    command: "cargo build -p fastapi-ai"
-    options:
-      runFromWorkspaceRoot: true
+  # Install and synchronize all project dependencies using uv
+  sync:
+    command: "uv sync"
 
-  # Build the release binary for production deployment.
-  build-release:
-    command: "cargo build -p fastapi-ai --release"
-    options:
-      runFromWorkspaceRoot: true
-
-  # Development server.
+  # Development server with hot reload
+  # Starts FastAPI in development mode with automatic reloading on file changes
+  # Accessible at http://localhost:8080
   dev:
-    command: "cargo run -p fastapi-ai"
+    command: "uv run fastapi dev app/main.py --port 8080"
+    deps: ["sync"]
     options:
-      runFromWorkspaceRoot: true
-      envFile: "apps/fastapi-ai/.env"
+      envFile: ".env"
 
-  # Production server (release build).
+  # Production server
+  # Starts FastAPI in production mode (optimized for performance)
+  # Accessible at http://localhost:8080
   start:
-    command: "cargo run -p fastapi-ai --release"
+    command: "uv run fastapi run app/main.py --port 8080"
+    deps: ["sync"]
     options:
-      runFromWorkspaceRoot: true
-      envFile: "apps/fastapi-ai/.env"
+      envFile: ".env"
 
-  # Run unit + integration tests for this crate.
-  test:
-    command: "cargo test -p fastapi-ai"
-    options:
-      runFromWorkspaceRoot: true
-
-  # Lint via clippy with workspace lint settings.
-  lint:
-    command: "cargo clippy -p fastapi-ai --all-targets -- -D warnings"
-    options:
-      runFromWorkspaceRoot: true
-
-  # Format check (CI gate).
-  fmt-check:
-    command: "cargo fmt -p fastapi-ai --check"
-    options:
-      runFromWorkspaceRoot: true
-
-  # Apply all pending database migrations via sqlx-cli.
-  # Requires `cargo install sqlx-cli --no-default-features --features postgres`.
+  # Apply all pending database migrations
+  # This task upgrades the database schema to the latest version
   migrate:
-    command: "sqlx migrate run --source apps/fastapi-ai/migrations"
+    command: "uv run alembic upgrade head"
+    deps: ["sync"]
     options:
-      runFromWorkspaceRoot: true
-      envFile: "apps/fastapi-ai/.env"
+      envFile: ".env"
 
-  # Create a new empty migration file.
+  # Create a new empty migration file
   # Usage: `moon run fastapi-ai:migrate-create -- "your migration description"`
+  # You'll need to manually write the migration logic
   migrate-create:
-    command: "sqlx migrate add --source apps/fastapi-ai/migrations"
+    command: "uv run alembic revision -m "
+    deps: ["sync"]
     options:
-      runFromWorkspaceRoot: true
-      envFile: "apps/fastapi-ai/.env"
+      envFile: ".env"
 
-  # Rollback the last migration.
+  # Auto-generate migration from model changes
+  # Compares current models with database schema and creates migration automatically
+  # Usage: `moon run fastapi-ai:migrate-autogenerate -- "migration description"`
+  # ⚠️ Always review the generated migration before applying it!
+  migrate-autogenerate:
+    command: "uv run alembic revision --autogenerate -m "
+    deps: ["sync"]
+    options:
+      envFile: ".env"
+
+  # Rollback the last migration
+  # Reverts the database schema by one migration step
   migrate-down:
-    command: "sqlx migrate revert --source apps/fastapi-ai/migrations"
+    command: "uv run alembic downgrade -1"
+    deps: ["sync"]
     options:
-      runFromWorkspaceRoot: true
-      envFile: "apps/fastapi-ai/.env"
+      envFile: ".env"
 
-  # Reset database to initial state (rolls back all migrations).
-  # WARNING: This will destroy all data!
+  # Reset database to initial state
+  # Rolls back all migrations, returning to an empty database
+  # ⚠️ This will destroy all data!
   migrate-reset:
-    command: "sqlx database reset --source apps/fastapi-ai/migrations -y"
+    command: "uv run alembic downgrade base"
+    deps: ["sync"]
     options:
-      runFromWorkspaceRoot: true
-      envFile: "apps/fastapi-ai/.env"
+      envFile: ".env"
 
-  # First-time setup: build, migrate, then sanity-check the binary.
+  # Populate database with dummy data
+  seed:
+    command: "uv run python -m app.database.seeder.main"
+    deps: ["sync"]
+    options:
+      envFile: ".env"
+
+  # Installs dependencies, applies migrations, and seeds the database
+  # Run this when setting up the project for the first time
   check-in-dance:
     command: 'echo "All is good, ready to go!"'
-    deps: ["build", "migrate"]
+    deps: ["sync", "migrate", "seed"]
     options:
+      envFile: ".env"
       shell: true
 
   docker-build:
