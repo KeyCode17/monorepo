@@ -117,6 +117,9 @@ pub const REGISTRY: &[&BuilderSpec] = &[
     &NEXTJS_APP,
     &REACT_APP,
     &REACT_SSR,
+    &RUST_AI,
+    &RUST_CLEAN,
+    &RUST_MODULAR,
     &STRAPI_CMS,
     &TANSTACK_START,
     &SHARED_UI,
@@ -151,6 +154,9 @@ const DEFAULT_BUILD_SET: &[&BuilderSpec] = &[
     &NEXTJS_APP,
     &REACT_APP,
     &REACT_SSR,
+    &RUST_AI,
+    &RUST_CLEAN,
+    &RUST_MODULAR,
     &STRAPI_CMS,
     &SHARED_UI,
 ];
@@ -455,6 +461,73 @@ fn go_modular_custom(ctx: &BuildCtx<'_>) -> Result<()> {
     Ok(())
 }
 
+/// Rust port of fastapi-ai: rust-ai, port 8080. Custom pass replaces
+/// the Rust underscore crate name (`rust_ai`) with the snake_case
+/// template variable.
+pub const RUST_AI: BuilderSpec = BuilderSpec {
+    name: "rust-ai",
+    source_name: "rust-ai",
+    target_name: "rust-ai",
+    banner: "Building Rust AI project templates...",
+    default_port: Some("8080"),
+    rename_exts_to_raw: &[],
+    rename_single_files: &[],
+    strip_shared_ui_from_package_json: false,
+    strip_shared_ui_from_tsconfig_json: false,
+    astro_frontmatter_prepend: false,
+    pre_custom: None,
+    custom: Some(rust_ai_custom),
+};
+
+fn rust_ai_custom(ctx: &BuildCtx<'_>) -> Result<()> {
+    replace_in_files(ctx.target, "rust_ai", "{{ package_name | snake_case }}")?;
+    Ok(())
+}
+
+/// Rust port of go-clean: rust-clean, port 8000. Custom pass replaces
+/// the Rust underscore crate name (`rust_clean`).
+pub const RUST_CLEAN: BuilderSpec = BuilderSpec {
+    name: "rust-clean",
+    source_name: "rust-clean",
+    target_name: "rust-clean",
+    banner: "Building Rust Clean Architecture project templates...",
+    default_port: Some("8000"),
+    rename_exts_to_raw: &[],
+    rename_single_files: &[".mockery.yml"],
+    strip_shared_ui_from_package_json: false,
+    strip_shared_ui_from_tsconfig_json: false,
+    astro_frontmatter_prepend: false,
+    pre_custom: None,
+    custom: Some(rust_clean_custom),
+};
+
+fn rust_clean_custom(ctx: &BuildCtx<'_>) -> Result<()> {
+    replace_in_files(ctx.target, "rust_clean", "{{ package_name | snake_case }}")?;
+    Ok(())
+}
+
+/// Rust port of go-modular: rust-modular, port 8000. Custom pass
+/// replaces the Rust underscore crate name (`rust_modular`).
+pub const RUST_MODULAR: BuilderSpec = BuilderSpec {
+    name: "rust-modular",
+    source_name: "rust-modular",
+    target_name: "rust-modular",
+    banner: "Building Rust Modular project templates...",
+    default_port: Some("8000"),
+    rename_exts_to_raw: &[],
+    rename_single_files: &[],
+    strip_shared_ui_from_package_json: false,
+    strip_shared_ui_from_tsconfig_json: false,
+    astro_frontmatter_prepend: false,
+    pre_custom: None,
+    custom: Some(rust_modular_custom),
+};
+
+fn rust_modular_custom(ctx: &BuildCtx<'_>) -> Result<()> {
+    replace_in_files(ctx.target, "rust_modular", "{{ package_name | snake_case }}")?;
+    Ok(())
+}
+
 /// `builder/nextjs-app.sh`: nextjs-app → nextjs, port 3200, strip shared-ui.
 pub const NEXTJS_APP: BuilderSpec = BuilderSpec {
     name: "nextjs-app",
@@ -622,9 +695,9 @@ mod tests {
     use super::*;
 
     #[test]
-    fn registry_has_all_eleven_builders() {
+    fn registry_has_all_fourteen_builders() {
         let names: Vec<&str> = REGISTRY.iter().map(|s| s.name).collect();
-        assert_eq!(names.len(), 11);
+        assert_eq!(names.len(), 14);
         assert!(names.contains(&"astro"));
         assert!(names.contains(&"expo-app"));
         assert!(names.contains(&"fastapi-ai"));
@@ -633,6 +706,9 @@ mod tests {
         assert!(names.contains(&"nextjs-app"));
         assert!(names.contains(&"react-app"));
         assert!(names.contains(&"react-ssr"));
+        assert!(names.contains(&"rust-ai"));
+        assert!(names.contains(&"rust-clean"));
+        assert!(names.contains(&"rust-modular"));
         assert!(names.contains(&"strapi-cms"));
         assert!(names.contains(&"tanstack-start"));
         assert!(names.contains(&"shared-ui"));
@@ -661,8 +737,8 @@ mod tests {
         );
         assert_eq!(
             names.len(),
-            10,
-            "default build set must have exactly 10 entries (matches bash orchestrator)"
+            13,
+            "default build set must have exactly 13 entries"
         );
     }
 
@@ -677,6 +753,9 @@ mod tests {
             "nextjs-app",
             "react-app",
             "react-ssr",
+            "rust-ai",
+            "rust-clean",
+            "rust-modular",
             "strapi-cms",
             "shared-ui",
         ];

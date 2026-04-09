@@ -32,7 +32,7 @@ Every number below was captured during the session of **2026-04-09** against the
 - `templates.json` matches the bash output after normalizing its `last_updated` timestamp
 - The 14 bash scripts have been deleted from the repo (`git rm`)
 - The GitHub Actions release workflow now invokes `cargo run -p templates-cli --release -- all`
-- Full evidence at `.omc/research/canonical-diff-phase-a.md`
+- Full canonical-equivalence evidence captured and verified during the Phase A session.
 
 ### What makes Phase B "feature-complete"
 
@@ -47,7 +47,7 @@ Every number below was captured during the session of **2026-04-09** against the
 - `legacy/fastapi-ai-original` retention branch not yet created
 - Python source tree not yet deleted
 - `phase-b-fastapi-ai` branch not yet merged to `main`
-- Production-mode OTel exporter wiring (`init_observability()` in production mode is currently a no-op stub; see `.omc/research/otel-structural-gap-fastapi-ai.md` placeholder in the plan)
+- Production-mode OTel exporter wiring (`init_observability()` in production mode is currently a no-op stub; structural gaps are documented in `apps/rust-ai/src/core/instrumentation.rs`)
 - The `sqlx::query!` compile-time-checked macros are **not used** — the health-check uses `sqlx::query("SELECT 1")` (runtime-parsed). This is honest: the big `sqlx::query!` benefit applies to Phase C/D (the Go services) which have real CRUD queries against schemas. Phase B has only the one pingcheck.
 
 ---
@@ -103,7 +103,7 @@ The 20-second runtime is dominated by 3 testcontainer-Postgres spinups (one per 
 
 ### 2.3 Phase A canonical equivalence (already on main)
 
-From `.omc/research/canonical-diff-phase-a.md`:
+Phase A canonical-equivalence results:
 
 ```
 Template             Bash files   Rust files   Status
@@ -299,7 +299,7 @@ If you exclude tests, the Rust port is actually **closer to the Python size than
 | Direct dependencies declared | 37 workspace refs (incl. 8 dev-deps) | 14 in `pyproject.toml` |
 | Total installed packages | n/a — cargo builds against the graph; nothing "installed" globally | **81 packages** in `.venv/` |
 | Supply-chain surface | every crate's `Cargo.toml` is audited at compile time by `cargo`; versions pinned in `Cargo.lock` | pip's dependency resolver; versions in `uv.lock` |
-| Version verification process | each new crate in this project is verified against `https://docs.rs/<name>/latest/` before pinning — 35 crates recorded in `.omc/research/rust-crate-verification.md` | standard `uv pip list` — no equivalent discipline in the original |
+| Version verification process | each new crate in this project is verified against `https://docs.rs/<name>/latest/` before pinning | standard `uv pip list` — no equivalent discipline in the original |
 
 The workspace-deps model is genuinely a Rust strength: every crate version is pinned once in the workspace `Cargo.toml` and every member crate inherits. No duplication, no drift.
 
@@ -835,7 +835,7 @@ Phase D adds these crates to `[workspace.dependencies]`:
 | `sha2` | 0.11.0 | SHA-256 of tokens (explicit, not transitive) |
 | `hex` | 0.4.3 | Hex encoding for `one_time_tokens.token_hash` |
 
-Two gotchas recorded in `.omc/research/rust-crate-verification.md`:
+Two gotchas to be aware of:
 
 1. **`argon2 0.5.x` pins transitively against `password-hash 0.5`.**
    Do NOT add `password-hash` directly at 0.6 or the dep tree
