@@ -4,11 +4,8 @@ members = [
     "apps/templates-cli",
     "apps/fastapi-ai",
     "apps/go-clean",
+    "apps/go-modular",
 ]
-
-# Placeholder members for later phases (commented out until each phase
-# creates its crate). Uncomment as Phase D lands.
-# Phase D: "apps/go-modular",
 
 [workspace.package]
 version = "0.1.0"
@@ -74,6 +71,22 @@ utoipa-swagger-ui  = { version = "9", features = ["axum"] }
 jsonwebtoken       = { version = "10.3.0", default-features = false, features = ["rust_crypto"] }
 bcrypt             = "0.19.0"
 tower_governor     = "0.8.0"
+
+# Phase D (go-modular) additions — argon2 password hashing + askama
+# email templates + lettre SMTP + validator for DTOs. Every version
+# below was verified against docs.rs on 2026-04-09.
+#
+# Gotcha: argon2 0.5.x pins against password-hash 0.5 transitively.
+# Do NOT add password-hash as a direct workspace dep — access via
+# `argon2::password_hash::{SaltString, PasswordHash, rand_core::OsRng}`.
+#
+# lettre feature flags: smtp-transport + tokio1 + tokio1-rustls-tls +
+# builder + hostname + pool. STARTTLS support is in the default rustls
+# transport path; port 465 (implicit TLS) uses Tls::Wrapper explicitly.
+argon2             = "0.5.3"
+askama             = "0.15.6"
+lettre             = { version = "0.11.21", default-features = false, features = ["smtp-transport", "tokio1", "tokio1-rustls-tls", "builder", "hostname", "pool"] }
+validator          = { version = "0.20.0", features = ["derive"] }
 
 # Test-only
 insta       = "1.47.2"
