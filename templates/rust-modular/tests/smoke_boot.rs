@@ -1,8 +1,8 @@
 //! Live-boot smoke test (D-IT-5).
 //!
-//! Spawns the real `go-modular` binary as a subprocess pointing at a
+//! Spawns the real `{{ package_name | kebab_case }}` binary as a subprocess pointing at a
 //! fresh Postgres 16-alpine testcontainer, runs migrations via
-//! `go-modular migrate run`, starts `go-modular serve` on a random
+//! `{{ package_name | kebab_case }} migrate run`, starts `{{ package_name | kebab_case }} serve` on a random
 //! port, then hits `/healthz` and `/api/openapi.json` with a real
 //! HTTP client. Asserts both endpoints respond and the `OpenAPI` body
 //! is valid JSON containing the expected metadata.
@@ -100,8 +100,8 @@ async fn smoke_boot_serves_healthz_and_openapi_json() {
     let server_port = pick_free_port();
     let env = base_env(&database_url, server_port);
 
-    // 3. Run migrations via `go-modular migrate run`. Uses the
-    //    `CARGO_BIN_EXE_go-modular` env var that cargo sets for
+    // 3. Run migrations via `{{ package_name | kebab_case }} migrate run`. Uses the
+    //    `CARGO_BIN_EXE_{{ package_name | kebab_case }}` env var that cargo sets for
     //    integration tests — points at the freshly-built binary.
     let bin = env!("CARGO_BIN_EXE_{{ package_name | kebab_case }}");
     let migrate_output = Command::new(bin)
@@ -120,7 +120,7 @@ async fn smoke_boot_serves_healthz_and_openapi_json() {
         String::from_utf8_lossy(&migrate_output.stderr)
     );
 
-    // 4. Start the server as `go-modular serve` subprocess.
+    // 4. Start the server as `{{ package_name | kebab_case }} serve` subprocess.
     let child = Command::new(bin)
         .envs(env.iter().map(|(k, v)| (*k, v.as_str())))
         .arg("serve")
@@ -128,7 +128,7 @@ async fn smoke_boot_serves_healthz_and_openapi_json() {
         .stderr(Stdio::piped())
         .kill_on_drop(true)
         .spawn()
-        .expect("spawn go-modular serve");
+        .expect("spawn {{ package_name | kebab_case }} serve");
     let _guard = ServerGuard::new(child);
 
     // 5. Wait for the server to become ready (up to ~10 seconds).
@@ -171,7 +171,7 @@ async fn smoke_boot_serves_healthz_and_openapi_json() {
         .expect("GET /api/openapi.json");
     assert_eq!(resp.status(), 200);
     let body: Value = resp.json().await.expect("openapi JSON");
-    assert_eq!(body["info"]["title"], "go-modular");
+    assert_eq!(body["info"]["title"], "{{ package_name | kebab_case }}");
     assert_eq!(body["openapi"], "3.1.0");
 
     let paths = body["paths"]
