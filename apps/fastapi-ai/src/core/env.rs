@@ -7,10 +7,10 @@
 //! automatically lowercases every environment variable name before
 //! deserializing, so `ML_PREFIX_API` (the shell env key) becomes
 //! `ml_prefix_api` (the struct field). We rely on this default so the
-//! Rust struct can use idiomatic snake_case field names without any
+//! Rust struct can use idiomatic `snake_case` field names without any
 //! `#[serde(rename = "...")]` noise. The Python service uses
-//! UPPER_SNAKE as its env var names (via pydantic-settings) and the
-//! shell/`.env` files use UPPER_SNAKE too — figment's lowercase
+//! `UPPER_SNAKE` as its env var names (via pydantic-settings) and the
+//! shell/`.env` files use `UPPER_SNAKE` too — figment's lowercase
 //! transform bridges those conventions transparently.
 
 use anyhow::Result;
