@@ -3,7 +3,7 @@
     "version": "0.0.0",
     "private": true,
     "scripts": {
-        "prepare": "moon setup",
+        "prepare": "moon setup && husky",
         "lint": "moon :lint",
         "check": "moon :check",
         "format": "biome format . --write",
@@ -21,6 +21,7 @@
     },
     "devDependencies": {
         "@biomejs/biome": "catalog:",
+        "husky": "^9.1.7",
         "npm-check-updates": "catalog:"
     },
     "pnpm": {
