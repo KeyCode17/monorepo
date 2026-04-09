@@ -39,6 +39,7 @@ pub mod mailer;
 pub mod middleware;
 pub mod modules;
 pub mod observer;
+pub mod openapi;
 pub mod server;
 
 use std::sync::Arc;

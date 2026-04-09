@@ -16,6 +16,7 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::types::Json;
+use utoipa::ToSchema;
 use uuid::Uuid;
 
 use crate::modules::user::models::{User, UserMetadata as _UserMetadata};
@@ -28,10 +29,11 @@ pub use crate::modules::user::models::UserMetadata;
 /// Row shape for `public.user_passwords`. The `password_hash` column
 /// is `BYTEA` and stores a PHC-encoded argon2id string (the bytes of
 /// the ASCII string, not a raw key). Matches the Go source.
-#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow, ToSchema)]
 pub struct UserPassword {
     pub user_id: Uuid,
     #[serde(with = "phc_bytes")]
+    #[schema(value_type = String, format = "byte")]
     pub password_hash: Vec<u8>,
     pub created_at: DateTime<Utc>,
     pub updated_at: Option<DateTime<Utc>>,
@@ -64,10 +66,11 @@ mod phc_bytes {
 /// on INSERT and `ip_address::TEXT as ip_address` on SELECT. The
 /// handler layer parses raw `String` from `X-Real-IP` / `X-Forwarded-For`
 /// headers and binds it directly.
-#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow, ToSchema)]
 pub struct Session {
     pub id: Uuid,
     pub user_id: Uuid,
+    #[schema(value_type = String, format = "byte")]
     pub token_hash: Vec<u8>,
     pub user_agent: Option<String>,
     pub device_name: Option<String>,
@@ -82,11 +85,12 @@ pub struct Session {
 
 // ----- refresh_tokens -----
 
-#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow, ToSchema)]
 pub struct RefreshToken {
     pub id: Uuid,
     pub user_id: Uuid,
     pub session_id: Option<Uuid>,
+    #[schema(value_type = String, format = "byte")]
     pub token_hash: Vec<u8>,
     pub ip_address: Option<String>,
     pub user_agent: Option<String>,
@@ -126,7 +130,7 @@ impl std::fmt::Display for OneTimeTokenSubject {
 /// Row shape for `public.one_time_tokens`. `token_hash` stays TEXT
 /// (lowercase hex SHA-256) — not in D-OPEN-1's BYTEA harmonization
 /// scope. `metadata` is JSONB.
-#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow, ToSchema)]
 pub struct OneTimeToken {
     pub id: Uuid,
     pub user_id: Option<Uuid>,
@@ -134,6 +138,7 @@ pub struct OneTimeToken {
     pub token_hash: String,
     pub relates_to: String,
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[schema(value_type = Option<Object>)]
     pub metadata: Option<Json<serde_json::Value>>,
     pub created_at: DateTime<Utc>,
     pub expires_at: DateTime<Utc>,
@@ -144,7 +149,7 @@ pub struct OneTimeToken {
 
 /// Response shape returned by signin and token-refresh endpoints.
 /// Matches the Go `AuthenticatedUser` struct byte-for-byte.
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, ToSchema)]
 pub struct AuthenticatedUser {
     pub user: User,
     pub access_token: String,

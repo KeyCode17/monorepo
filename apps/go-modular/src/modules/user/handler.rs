@@ -25,11 +25,24 @@ use uuid::Uuid;
 use validator::Validate;
 
 use crate::AppState;
+use crate::domain::response::ErrorBody;
 use crate::domain::{AppError, MessageResponse};
 
 use super::models::{FilterUser, User, UserCreateRequest};
 
 /// `POST /api/v1/users`.
+#[utoipa::path(
+    post,
+    path = "/api/v1/users",
+    tag = "User Management",
+    request_body = UserCreateRequest,
+    responses(
+        (status = 201, description = "User created", body = User),
+        (status = 400, description = "Validation failed", body = ErrorBody),
+        (status = 401, description = "Unauthorized", body = ErrorBody),
+    ),
+    security(("bearer_auth" = []))
+)]
 pub async fn create_user(
     State(state): State<AppState>,
     Json(req): Json<UserCreateRequest>,
@@ -59,6 +72,17 @@ pub async fn create_user(
 }
 
 /// `GET /api/v1/users`.
+#[utoipa::path(
+    get,
+    path = "/api/v1/users",
+    tag = "User Management",
+    params(FilterUser),
+    responses(
+        (status = 200, description = "List users", body = Vec<User>),
+        (status = 401, description = "Unauthorized", body = ErrorBody),
+    ),
+    security(("bearer_auth" = []))
+)]
 pub async fn list_users(
     State(state): State<AppState>,
     Query(filter): Query<FilterUser>,
@@ -68,6 +92,19 @@ pub async fn list_users(
 }
 
 /// `GET /api/v1/users/:userId`.
+#[utoipa::path(
+    get,
+    path = "/api/v1/users/{userId}",
+    tag = "User Management",
+    params(("userId" = String, Path, description = "User UUID")),
+    responses(
+        (status = 200, description = "User found", body = User),
+        (status = 400, description = "Invalid UUID", body = ErrorBody),
+        (status = 401, description = "Unauthorized", body = ErrorBody),
+        (status = 404, description = "User not found", body = ErrorBody),
+    ),
+    security(("bearer_auth" = []))
+)]
 pub async fn get_user(
     State(state): State<AppState>,
     Path(user_id): Path<String>,
@@ -78,6 +115,20 @@ pub async fn get_user(
 }
 
 /// `PUT /api/v1/users/:userId`.
+#[utoipa::path(
+    put,
+    path = "/api/v1/users/{userId}",
+    tag = "User Management",
+    params(("userId" = String, Path, description = "User UUID")),
+    request_body = UserCreateRequest,
+    responses(
+        (status = 200, description = "User updated", body = MessageResponse),
+        (status = 400, description = "Validation failed", body = ErrorBody),
+        (status = 401, description = "Unauthorized", body = ErrorBody),
+        (status = 404, description = "User not found", body = ErrorBody),
+    ),
+    security(("bearer_auth" = []))
+)]
 pub async fn update_user(
     State(state): State<AppState>,
     Path(user_id): Path<String>,
@@ -109,6 +160,19 @@ pub async fn update_user(
 }
 
 /// `DELETE /api/v1/users/:userId`.
+#[utoipa::path(
+    delete,
+    path = "/api/v1/users/{userId}",
+    tag = "User Management",
+    params(("userId" = String, Path, description = "User UUID")),
+    responses(
+        (status = 200, description = "User deleted", body = MessageResponse),
+        (status = 400, description = "Invalid UUID", body = ErrorBody),
+        (status = 401, description = "Unauthorized", body = ErrorBody),
+        (status = 404, description = "User not found", body = ErrorBody),
+    ),
+    security(("bearer_auth" = []))
+)]
 pub async fn delete_user(
     State(state): State<AppState>,
     Path(user_id): Path<String>,

@@ -16,15 +16,16 @@ use validator::Validate;
 
 use crate::AppState;
 use crate::apputils::validation_errors_to_map;
+use crate::domain::response::ErrorBody;
 use crate::domain::{AppError, MessageResponse};
 
 use super::middleware::AuthContext;
 use super::models::{AuthenticatedUser, Session};
 use super::schema::{
-    CreateSessionRequest, InitiateEmailVerificationRequest, ResendEmailVerificationRequest,
-    RevokeEmailVerificationRequest, SetPasswordRequest, SignInWithEmailRequest,
-    SignInWithUsernameRequest, TokenRefreshRequest, UpdatePasswordRequest, UpdateSessionRequest,
-    ValidateEmailVerificationRequest, VerifyEmailLinkQuery,
+    CreateSessionRequest, InitiateEmailVerificationRequest, NeutralResponse,
+    ResendEmailVerificationRequest, RevokeEmailVerificationRequest, SetPasswordRequest,
+    SignInWithEmailRequest, SignInWithUsernameRequest, TokenRefreshRequest, UpdatePasswordRequest,
+    UpdateSessionRequest, ValidateEmailVerificationRequest, VerifyEmailLinkQuery,
 };
 use super::service::RequestCtx;
 
@@ -64,6 +65,17 @@ fn validate<T: Validate>(req: &T) -> Result<(), AppError> {
 
 // ----- signin -----
 
+#[utoipa::path(
+    post,
+    path = "/api/v1/auth/signin/email",
+    tag = "Authentication",
+    request_body = SignInWithEmailRequest,
+    responses(
+        (status = 200, description = "Signed in", body = AuthenticatedUser),
+        (status = 400, description = "Validation failed", body = ErrorBody),
+        (status = 401, description = "Invalid credentials or email not verified", body = ErrorBody),
+    )
+)]
 pub async fn sign_in_with_email(
     State(state): State<AppState>,
     headers: HeaderMap,
@@ -76,6 +88,17 @@ pub async fn sign_in_with_email(
     Ok(Json(result))
 }
 
+#[utoipa::path(
+    post,
+    path = "/api/v1/auth/signin/username",
+    tag = "Authentication",
+    request_body = SignInWithUsernameRequest,
+    responses(
+        (status = 200, description = "Signed in", body = AuthenticatedUser),
+        (status = 400, description = "Validation failed", body = ErrorBody),
+        (status = 401, description = "Invalid credentials", body = ErrorBody),
+    )
+)]
 pub async fn sign_in_with_username(
     State(state): State<AppState>,
     headers: HeaderMap,
@@ -90,6 +113,17 @@ pub async fn sign_in_with_username(
 
 // ----- verify-email (link-based) -----
 
+#[utoipa::path(
+    get,
+    path = "/api/v1/auth/verify-email",
+    tag = "Email Verification",
+    params(VerifyEmailLinkQuery),
+    responses(
+        (status = 200, description = "Email verified", body = MessageResponse),
+        (status = 302, description = "Redirected to `redirect_to` URL"),
+        (status = 401, description = "Invalid or expired token", body = ErrorBody),
+    )
+)]
 pub async fn verify_email_by_link(
     State(state): State<AppState>,
     Query(q): Query<VerifyEmailLinkQuery>,
@@ -108,6 +142,18 @@ pub async fn verify_email_by_link(
 
 // ----- token rotation (NEW; replaces 4 deleted CRUD endpoints) -----
 
+#[utoipa::path(
+    post,
+    path = "/api/v1/auth/token/refresh",
+    tag = "Authentication",
+    request_body = TokenRefreshRequest,
+    responses(
+        (status = 200, description = "Refreshed", body = AuthenticatedUser),
+        (status = 400, description = "Validation failed", body = ErrorBody),
+        (status = 401, description = "Invalid, expired, or reused refresh token", body = ErrorBody),
+        (status = 409, description = "Concurrent refresh in progress", body = ErrorBody),
+    )
+)]
 pub async fn rotate_refresh_token(
     State(state): State<AppState>,
     headers: HeaderMap,
@@ -122,6 +168,17 @@ pub async fn rotate_refresh_token(
 
 // ----- verification (initiate, validate, revoke, resend) -----
 
+#[utoipa::path(
+    post,
+    path = "/api/v1/auth/verification/email/initiate",
+    tag = "Email Verification",
+    request_body = InitiateEmailVerificationRequest,
+    responses(
+        (status = 202, description = "Verification email sent (neutral for unknown emails)", body = NeutralResponse),
+        (status = 400, description = "Validation failed", body = ErrorBody),
+        (status = 429, description = "Cooldown — retry after Retry-After seconds", body = ErrorBody),
+    )
+)]
 pub async fn initiate_email_verification(
     State(state): State<AppState>,
     Json(req): Json<InitiateEmailVerificationRequest>,
@@ -138,6 +195,17 @@ pub async fn initiate_email_verification(
     ))
 }
 
+#[utoipa::path(
+    post,
+    path = "/api/v1/auth/verification/email/validate",
+    tag = "Email Verification",
+    request_body = ValidateEmailVerificationRequest,
+    responses(
+        (status = 200, description = "Email verified", body = MessageResponse),
+        (status = 400, description = "Validation failed", body = ErrorBody),
+        (status = 401, description = "Invalid or expired token", body = ErrorBody),
+    )
+)]
 pub async fn validate_email_verification(
     State(state): State<AppState>,
     Json(req): Json<ValidateEmailVerificationRequest>,
@@ -147,6 +215,18 @@ pub async fn validate_email_verification(
     Ok(Json(MessageResponse::new("Email verified successfully")))
 }
 
+#[utoipa::path(
+    post,
+    path = "/api/v1/auth/verification/email/revoke",
+    tag = "Email Verification",
+    request_body = RevokeEmailVerificationRequest,
+    responses(
+        (status = 200, description = "Verification token revoked", body = MessageResponse),
+        (status = 400, description = "Validation failed", body = ErrorBody),
+        (status = 401, description = "Unauthorized", body = ErrorBody),
+    ),
+    security(("bearer_auth" = []))
+)]
 pub async fn revoke_email_verification(
     State(state): State<AppState>,
     Json(req): Json<RevokeEmailVerificationRequest>,
@@ -159,6 +239,19 @@ pub async fn revoke_email_verification(
     Ok(Json(MessageResponse::new("Verification token revoked")))
 }
 
+#[utoipa::path(
+    post,
+    path = "/api/v1/auth/verification/email/resend",
+    tag = "Email Verification",
+    request_body = ResendEmailVerificationRequest,
+    responses(
+        (status = 202, description = "Verification email resent (neutral for unknown emails)", body = NeutralResponse),
+        (status = 400, description = "Validation failed", body = ErrorBody),
+        (status = 401, description = "Unauthorized", body = ErrorBody),
+        (status = 429, description = "Cooldown — retry after Retry-After seconds", body = ErrorBody),
+    ),
+    security(("bearer_auth" = []))
+)]
 pub async fn resend_email_verification(
     State(state): State<AppState>,
     Json(req): Json<ResendEmailVerificationRequest>,
@@ -175,6 +268,19 @@ pub async fn resend_email_verification(
 
 // ----- password (ownership-checked) -----
 
+#[utoipa::path(
+    post,
+    path = "/api/v1/auth/password",
+    tag = "Password",
+    request_body = SetPasswordRequest,
+    responses(
+        (status = 200, description = "Password set", body = MessageResponse),
+        (status = 400, description = "Validation failed", body = ErrorBody),
+        (status = 401, description = "Unauthorized", body = ErrorBody),
+        (status = 403, description = "Cannot set password for another user", body = ErrorBody),
+    ),
+    security(("bearer_auth" = []))
+)]
 pub async fn set_password(
     State(state): State<AppState>,
     Extension(auth): Extension<AuthContext>,
@@ -185,6 +291,20 @@ pub async fn set_password(
     Ok(Json(MessageResponse::new("Password set successfully")))
 }
 
+#[utoipa::path(
+    put,
+    path = "/api/v1/auth/password/{userId}",
+    tag = "Password",
+    params(("userId" = String, Path, description = "Target user UUID")),
+    request_body = UpdatePasswordRequest,
+    responses(
+        (status = 200, description = "Password updated (all sessions + refresh tokens revoked)", body = MessageResponse),
+        (status = 400, description = "Validation failed", body = ErrorBody),
+        (status = 401, description = "Invalid credentials", body = ErrorBody),
+        (status = 403, description = "Cannot modify another user's password", body = ErrorBody),
+    ),
+    security(("bearer_auth" = []))
+)]
 pub async fn update_password(
     State(state): State<AppState>,
     Extension(auth): Extension<AuthContext>,
@@ -202,6 +322,16 @@ pub async fn update_password(
 
 // ----- session CRUD (keep-track) -----
 
+#[utoipa::path(
+    post,
+    path = "/api/v1/auth/session",
+    tag = "Sessions",
+    request_body = CreateSessionRequest,
+    responses(
+        (status = 201, description = "Session created", body = Session),
+        (status = 400, description = "Validation failed", body = ErrorBody),
+    )
+)]
 pub async fn create_session(
     State(state): State<AppState>,
     Json(req): Json<CreateSessionRequest>,
@@ -239,6 +369,17 @@ pub async fn create_session(
     Ok((StatusCode::CREATED, Json(session)))
 }
 
+#[utoipa::path(
+    get,
+    path = "/api/v1/auth/session/{sessionId}",
+    tag = "Sessions",
+    params(("sessionId" = String, Path, description = "Session UUID")),
+    responses(
+        (status = 200, description = "Session found", body = Session),
+        (status = 400, description = "Invalid UUID", body = ErrorBody),
+        (status = 404, description = "Session not found", body = ErrorBody),
+    )
+)]
 pub async fn get_session(
     State(state): State<AppState>,
     Path(session_id): Path<String>,
@@ -248,6 +389,19 @@ pub async fn get_session(
     Ok(Json(session))
 }
 
+#[utoipa::path(
+    put,
+    path = "/api/v1/auth/session",
+    tag = "Sessions",
+    request_body = UpdateSessionRequest,
+    responses(
+        (status = 200, description = "Session updated", body = MessageResponse),
+        (status = 400, description = "Validation failed", body = ErrorBody),
+        (status = 401, description = "Unauthorized", body = ErrorBody),
+        (status = 404, description = "Session not found", body = ErrorBody),
+    ),
+    security(("bearer_auth" = []))
+)]
 pub async fn update_session(
     State(state): State<AppState>,
     Json(req): Json<UpdateSessionRequest>,
@@ -290,6 +444,19 @@ pub async fn update_session(
     Ok(Json(MessageResponse::new("Session updated successfully")))
 }
 
+#[utoipa::path(
+    delete,
+    path = "/api/v1/auth/session/{sessionId}",
+    tag = "Sessions",
+    params(("sessionId" = String, Path, description = "Session UUID")),
+    responses(
+        (status = 200, description = "Session deleted (access tokens invalidated)", body = MessageResponse),
+        (status = 400, description = "Invalid UUID", body = ErrorBody),
+        (status = 401, description = "Unauthorized", body = ErrorBody),
+        (status = 404, description = "Session not found", body = ErrorBody),
+    ),
+    security(("bearer_auth" = []))
+)]
 pub async fn delete_session(
     State(state): State<AppState>,
     Path(session_id): Path<String>,

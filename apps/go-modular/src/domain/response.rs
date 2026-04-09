@@ -17,11 +17,21 @@
 //! message-only shape used by update/delete success responses.
 
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 
 /// `{"message": "..."}` — used by update/delete success responses.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct MessageResponse {
     pub message: String,
+}
+
+/// Generic `{"error": "..."}` body returned by all error paths.
+/// Not used in Rust code directly (handlers return `AppError` which
+/// serializes to this shape via `IntoResponse`) but declared here
+/// so it appears as a reusable schema in the `OpenAPI` spec.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct ErrorBody {
+    pub error: String,
 }
 
 impl MessageResponse {

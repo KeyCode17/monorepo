@@ -13,11 +13,12 @@
 //! existing user module pattern.
 
 use serde::{Deserialize, Serialize};
+use utoipa::{IntoParams, ToSchema};
 use validator::Validate;
 
 // ----- Password -----
 
-#[derive(Debug, Clone, Deserialize, Validate)]
+#[derive(Debug, Clone, Deserialize, Validate, ToSchema)]
 pub struct SetPasswordRequest {
     #[validate(length(min = 1))]
     pub user_id: String,
@@ -29,7 +30,7 @@ pub struct SetPasswordRequest {
     pub password_confirmation: String,
 }
 
-#[derive(Debug, Clone, Deserialize, Validate)]
+#[derive(Debug, Clone, Deserialize, Validate, ToSchema)]
 pub struct UpdatePasswordRequest {
     #[validate(length(min = 8, message = "Minimum length is 8"))]
     pub current_password: String,
@@ -43,7 +44,7 @@ pub struct UpdatePasswordRequest {
 
 // ----- Session CRUD -----
 
-#[derive(Debug, Clone, Deserialize, Validate)]
+#[derive(Debug, Clone, Deserialize, Validate, ToSchema)]
 pub struct CreateSessionRequest {
     #[validate(length(min = 1))]
     pub user_id: String,
@@ -60,7 +61,7 @@ pub struct CreateSessionRequest {
     pub expires_at: String,
 }
 
-#[derive(Debug, Clone, Deserialize, Validate)]
+#[derive(Debug, Clone, Deserialize, Validate, ToSchema)]
 pub struct UpdateSessionRequest {
     #[validate(length(min = 1))]
     pub session_id: String,
@@ -76,7 +77,7 @@ pub struct UpdateSessionRequest {
 
 // ----- Signin -----
 
-#[derive(Debug, Clone, Deserialize, Validate)]
+#[derive(Debug, Clone, Deserialize, Validate, ToSchema)]
 pub struct SignInWithEmailRequest {
     #[validate(email(message = "Must be a valid email address"))]
     pub email: String,
@@ -85,7 +86,7 @@ pub struct SignInWithEmailRequest {
     pub password: String,
 }
 
-#[derive(Debug, Clone, Deserialize, Validate)]
+#[derive(Debug, Clone, Deserialize, Validate, ToSchema)]
 pub struct SignInWithUsernameRequest {
     #[validate(length(min = 1, message = "The username field is required"))]
     pub username: String,
@@ -101,7 +102,7 @@ pub struct SignInWithUsernameRequest {
 /// This is the NEW endpoint that replaces the 4 naive refresh-token
 /// CRUD endpoints deleted per D-OPEN-5. It implements
 /// rotate-on-refresh with reuse detection per design 3.1.
-#[derive(Debug, Clone, Deserialize, Validate)]
+#[derive(Debug, Clone, Deserialize, Validate, ToSchema)]
 pub struct TokenRefreshRequest {
     #[validate(length(min = 1, message = "The refresh_token field is required"))]
     pub refresh_token: String,
@@ -109,7 +110,7 @@ pub struct TokenRefreshRequest {
 
 // ----- Verification -----
 
-#[derive(Debug, Clone, Deserialize, Validate)]
+#[derive(Debug, Clone, Deserialize, Validate, ToSchema)]
 pub struct InitiateEmailVerificationRequest {
     #[validate(email(message = "Must be a valid email address"))]
     pub email: String,
@@ -119,19 +120,19 @@ pub struct InitiateEmailVerificationRequest {
     pub redirect_to: Option<String>,
 }
 
-#[derive(Debug, Clone, Deserialize, Validate)]
+#[derive(Debug, Clone, Deserialize, Validate, ToSchema)]
 pub struct ValidateEmailVerificationRequest {
     #[validate(length(min = 1, message = "The token field is required"))]
     pub token: String,
 }
 
-#[derive(Debug, Clone, Deserialize, Validate)]
+#[derive(Debug, Clone, Deserialize, Validate, ToSchema)]
 pub struct RevokeEmailVerificationRequest {
     #[validate(length(min = 1, message = "The token field is required"))]
     pub token: String,
 }
 
-#[derive(Debug, Clone, Deserialize, Validate)]
+#[derive(Debug, Clone, Deserialize, Validate, ToSchema)]
 pub struct ResendEmailVerificationRequest {
     #[validate(email(message = "Must be a valid email address"))]
     pub email: String,
@@ -140,7 +141,8 @@ pub struct ResendEmailVerificationRequest {
 // ----- Query params -----
 
 /// `GET /api/v1/auth/verify-email?token=...&redirect_to=...`.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
 pub struct VerifyEmailLinkQuery {
     pub token: String,
     #[serde(default)]
@@ -151,7 +153,7 @@ pub struct VerifyEmailLinkQuery {
 
 /// Simple success response for neutral endpoints (verification
 /// initiate, resend).
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, ToSchema)]
 pub struct NeutralResponse {
     pub message: String,
 }

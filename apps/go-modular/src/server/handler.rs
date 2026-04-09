@@ -9,6 +9,7 @@ use axum::extract::State;
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use serde_json::json;
+use utoipa::OpenApi;
 
 use crate::AppState;
 
@@ -57,7 +58,11 @@ pub async fn api_docs(State(state): State<AppState>) -> impl IntoResponse {
     )
 }
 
-/// `GET /api/openapi.json` — `OpenAPI` spec. Placeholder for D-DOC-1.
+/// `GET /api/openapi.json` — generated `OpenAPI` 3.0 spec.
+///
+/// Built at compile time by utoipa from the per-handler
+/// `#[utoipa::path]` annotations collected into
+/// [`crate::openapi::ApiDoc`].
 pub async fn openapi_json(State(state): State<AppState>) -> impl IntoResponse {
     if !state.config.app.enable_api_docs {
         return (
@@ -65,18 +70,15 @@ pub async fn openapi_json(State(state): State<AppState>) -> impl IntoResponse {
             Json(json!({"error": "API docs are disabled"})),
         );
     }
-    (
-        StatusCode::OK,
-        Json(json!({
-            "openapi": "3.0.3",
-            "info": {
-                "title": "go-modular",
-                "version": env!("CARGO_PKG_VERSION"),
-                "description": "Phase D scaffold — full surface lands in D-DOC-1"
-            },
-            "paths": {}
-        })),
-    )
+
+    let doc = crate::openapi::ApiDoc::openapi();
+    match serde_json::to_value(&doc) {
+        Ok(value) => (StatusCode::OK, Json(value)),
+        Err(err) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({"error": format!("serialize openapi: {err}")})),
+        ),
+    }
 }
 
 /// Catch-all 404.
