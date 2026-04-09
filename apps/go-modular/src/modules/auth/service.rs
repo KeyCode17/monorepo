@@ -30,6 +30,7 @@ use crate::apputils::{
     sha256_hex,
 };
 use crate::domain::AppError;
+use crate::mailer::Mailer;
 use crate::modules::user::UserService;
 
 use super::models::{AuthenticatedUser, OneTimeToken, RefreshToken, Session};
@@ -65,6 +66,8 @@ pub struct AuthService {
     user_service: Arc<UserService>,
     jwt: Arc<JwtGenerator>,
     password_hasher: Arc<PasswordHasher>,
+    mailer: Arc<Mailer>,
+    base_url: String,
 }
 
 impl AuthService {
@@ -74,12 +77,16 @@ impl AuthService {
         user_service: Arc<UserService>,
         jwt: Arc<JwtGenerator>,
         password_hasher: Arc<PasswordHasher>,
+        mailer: Arc<Mailer>,
+        base_url: String,
     ) -> Self {
         Self {
             repo,
             user_service,
             jwt,
             password_hasher,
+            mailer,
+            base_url,
         }
     }
 
@@ -462,14 +469,23 @@ impl AuthService {
         // Atomic upsert (fix §9.8 TOCTOU).
         self.repo.upsert_ott_for_user_subject(&mut ott).await?;
 
-        // TODO(D-SMTP-1): send email via lettre. For v1 scaffold
-        // we only log the raw token to stdout so dev flows still
-        // work without a real mailer.
-        tracing::info!(
-            email = %user.email,
-            raw_token = %raw_token,
-            "verification token generated (mailer not yet wired)"
+        // Send verification email via lettre (D-SMTP-3). The mailer
+        // falls back to stdout logging if no transport is configured
+        // so dev flows without a real relay still work.
+        let verification_url = format!(
+            "{}/api/v1/auth/verify-email?token={}",
+            self.base_url.trim_end_matches('/'),
+            raw_token
         );
+        let display_name = if user.display_name.is_empty() {
+            "there".to_string()
+        } else {
+            user.display_name.clone()
+        };
+        let expiry_minutes = VERIFICATION_TTL.as_secs() / 60;
+        self.mailer
+            .send_verification_email(&user.email, &display_name, &verification_url, expiry_minutes)
+            .await?;
         Ok(())
     }
 

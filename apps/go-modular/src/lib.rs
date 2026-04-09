@@ -49,6 +49,7 @@ use sqlx::PgPool;
 
 use crate::apputils::{JwtGenerator, PasswordHasher};
 use crate::config::Config;
+use crate::mailer::Mailer;
 use crate::modules::auth::AuthService;
 use crate::modules::auth::repository::AuthRepository;
 use crate::modules::user::{UserRepository, UserService};
@@ -58,27 +59,28 @@ pub use crate::server::serve;
 /// Application state shared with every axum handler via
 /// `axum::extract::State`.
 ///
-/// After D-AUTH-1..15 this holds `config`, `pool`, and both the
-/// user + auth services. The mailer (`Arc<Mailer>`) lands in D-SMTP.
+/// Holds `config`, `pool`, user + auth services, and the mailer.
 #[derive(Clone)]
 pub struct AppState {
     pub config: Arc<Config>,
     pub pool: PgPool,
     pub user_service: Arc<UserService>,
     pub auth_service: Arc<AuthService>,
+    pub mailer: Arc<Mailer>,
 }
 
 impl AppState {
     /// Construct from a fully-loaded [`Config`]. Opens the DB pool
     /// with the retry semantics from [`crate::database::connect_pool`]
-    /// and wires user + auth services.
+    /// and wires user + auth services + mailer.
     pub async fn from_config(config: Config) -> Result<Self> {
         let pool = crate::database::connect_pool(&config.database).await?;
         Ok(Self::from_parts(config, pool))
     }
 
     /// Test-only constructor: inject an existing `PgPool` (from a
-    /// testcontainer) alongside a pre-built `Config`.
+    /// testcontainer) alongside a pre-built `Config`. Uses a noop
+    /// mailer so tests don't need an SMTP relay.
     #[must_use]
     pub fn from_parts(config: Config, pool: PgPool) -> Self {
         let user_repo = Arc::new(UserRepository::new(pool.clone()));
@@ -92,11 +94,14 @@ impl AppState {
             config.app.app_base_url.clone(),
         ));
         let password_hasher = Arc::new(PasswordHasher::new());
+        let mailer = Arc::new(Mailer::from_config(&config.mailer));
         let auth_service = Arc::new(AuthService::new(
             auth_repo,
             user_service.clone(),
             jwt,
             password_hasher,
+            mailer.clone(),
+            config.app.app_base_url.clone(),
         ));
 
         Self {
@@ -104,6 +109,7 @@ impl AppState {
             pool,
             user_service,
             auth_service,
+            mailer,
         }
     }
 }
