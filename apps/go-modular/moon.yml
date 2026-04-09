@@ -2,154 +2,92 @@
 # yaml-language-server: $schema=https://moonrepo.dev/schemas/project.json
 $schema: "https://moonrepo.dev/schemas/project.json"
 
+# Phase D: this project is now a Rust crate. moon doesn't have a
+# first-class rust toolchain entry, so the language is "unknown" and
+# tasks shell out to cargo directly.
 layer: application
-language: go
-toolchains:
-  default: null
-stack: backend
-tags: ["app", "backend"]
+language: unknown
+tags: ["app", "rust"]
 
-# Overrides the name (identifier) of the project
 id: "go-modular"
 
 project:
   title: "go-modular"
-  description: "_CHANGE_ME_DESCRIPTION_"
+  description: "Corrected-port Rust rewrite of the Zero One Group go-modular service (Phase D)."
 
 tasks:
-  dev:
-    command: "watchexec -r -e go,toml -w . --no-vcs-ignore -- go run -tags debug ./cmd/"
-    args: ["serve"]
-    deps: [kill-port, generate-swagger]
-    options:
-      cache: false
-      envFile: ".env"
-
-  run:
-    command: "go run -tags debug $projectRoot/cmd/"
-    deps: [kill-port, generate-swagger]
-    options:
-      cache: false
-      interactive: true
-      mergeOutputs: replace
-      outputStyle: buffer
-      mergeArgs: replace
-      envFile: ".env"
-
   build:
-    env:
-      LDFLAGS_BUILD_HASH: "-X $project/internal.BuildHash=$vcsRevision"
-      LDFLAGS_BUILD_DATE: "-X $project/internal.BuildDate=$datetime"
-      LDFLAGS_STATIC: "-w -s -extldflags '-static'"
-    script: |
-      go build -tags prod -trimpath -buildmode=pie -buildvcs=false \
-        --ldflags="$LDFLAGS_STATIC $LDFLAGS_BUILD_DATE $LDFLAGS_BUILD_HASH \
-        -X $project/internal.Version=$(jq -r .version <$workspaceRoot'/package.json')" \
-        -o $projectRoot/build/release/$project $projectRoot/cmd/
-    deps: [tidy, generate-swagger]
+    command: "cargo build -p go-modular"
     options:
-      mergeArgs: append
-      envFile: ".env"
+      runFromWorkspaceRoot: true
+
+  build-release:
+    command: "cargo build -p go-modular --release"
+    options:
+      runFromWorkspaceRoot: true
+
+  dev:
+    command: "cargo run -p go-modular -- serve"
+    options:
+      runFromWorkspaceRoot: true
+      envFile: "apps/go-modular/.env"
 
   start:
-    command: "build/release/$project"
-    args: ["serve"]
-    deps: [kill-port]
+    command: "cargo run -p go-modular --release -- serve"
     options:
-      cache: false
-      outputStyle: buffer
-      mergeArgs: replace
-      envFile: ".env"
+      runFromWorkspaceRoot: true
+      envFile: "apps/go-modular/.env"
 
   test:
-    script: "gotestsum --format short-verbose --"
-    args: ["-count=1", "-v", "./internal/...", "./modules/...", "./pkg/..."]
-    deps: ["tidy"]
+    command: "cargo test -p go-modular"
     options:
-      cache: false
-      runFromWorkspaceRoot: false
-      mergeOutputs: replace
-      outputStyle: buffer
-      mergeArgs: replace
-      envFile: ".env"
-
-  coverage:
-    script: |
-      gotestsum --format testname -- -coverprofile=build/coverage.out ./internal/... ./modules/... ./pkg/...
-      go tool cover -html=$projectRoot/build/coverage.out -o $projectRoot/build/coverage.html
-      go tool cover -func=$projectRoot/build/coverage.out | tail -1
-    deps: ["tidy"]
-    options:
-      shell: true
-      cache: false
-      runFromWorkspaceRoot: false
-      mergeOutputs: replace
-      outputStyle: buffer
-      mergeArgs: replace
-      envFile: ".env"
-
-  format:
-    command: "gofmt -s -w $projectRoot"
-    options:
-      envFile: ".env"
-      cache: false
-
-  tidy:
-    command: "go mod tidy"
-
-  kill-port:
-    # This is a hack for killing the listen port before starting the app
-    command: "pnpm --package=kill-port-process-cli dlx kill-port 8000"
-    deps: [tidy]
-    options:
-      envFile: ".env"
-      internal: true
-      outputStyle: none
-
-  dump:
-    script: |
-      mkdir -p $workspaceRoot/tmp/db_dump
-      DUMP_FILENAME="$project-$(date -u +%y%m%d_%H%M%S)"
-
-      docker-compose -f $workspaceRoot/compose.yaml exec pgsql pg_dump -Fp --no-acl \
-        --no-owner --no-privileges -U postgres --schema=public --schema-only \
-        postgres > $workspaceRoot/tmp/db_dump/$DUMP_FILENAME-schema_only.sql
-
-      docker-compose -f $workspaceRoot/compose.yaml exec pgsql pg_dump -Fp --no-acl \
-        --no-owner --no-privileges -U postgres --schema=public \
-        postgres > $workspaceRoot/tmp/db_dump/$DUMP_FILENAME-with_data.sql
-    options:
-      mergeEnv: replace
       runFromWorkspaceRoot: true
-      outputStyle: buffer-only-failure
-      interactive: false
-      runInCI: false
-      cache: false
+
+  lint:
+    command: "cargo clippy -p go-modular --all-targets -- -D warnings"
+    options:
+      runFromWorkspaceRoot: true
+
+  fmt-check:
+    command: "cargo fmt -p go-modular --check"
+    options:
+      runFromWorkspaceRoot: true
+
+  # Apply all pending database migrations via the in-process CLI.
+  migrate:
+    command: "cargo run -p go-modular -- migrate run"
+    options:
+      runFromWorkspaceRoot: true
+      envFile: "apps/go-modular/.env"
+
+  migrate-create:
+    command: "cargo run -p go-modular -- migrate create"
+    options:
+      runFromWorkspaceRoot: true
+      envFile: "apps/go-modular/.env"
+
+  migrate-reset:
+    command: "cargo run -p go-modular -- migrate reset"
+    options:
+      runFromWorkspaceRoot: true
+      envFile: "apps/go-modular/.env"
+
+  seed:
+    command: "cargo run -p go-modular -- seed"
+    options:
+      runFromWorkspaceRoot: true
+      envFile: "apps/go-modular/.env"
+
+  generate-config:
+    command: "cargo run -p go-modular -- generate-config"
+    options:
+      runFromWorkspaceRoot: true
+
+  check-in-dance:
+    command: 'echo "All is good, ready to go!"'
+    deps: ["build", "migrate"]
+    options:
       shell: true
-
-  generate-swagger:
-    script: >
-      swag init -o $projectRoot/docs -d cmd,internal,modules --parseDependency
-      && swag fmt --dir $projectRoot/docs
-      && go mod tidy
-    options:
-      cache: false
-      runFromWorkspaceRoot: false
-      outputStyle: buffer-only-failure
-      mergeOutputs: replace
-      mergeArgs: replace
-      envFile: ".env"
-
-  generate-mock:
-    # command: "docker run --network=host --rm -it --env-file $projectRoot/.env -v $projectRoot:/src -w /src vektra/mockery:3mockery"
-    command: 'mockery'
-    options:
-      cache: false
-      runFromWorkspaceRoot: false
-      outputStyle: buffer-only-failure
-      mergeOutputs: replace
-      mergeArgs: replace
-      envFile: ".env"
 
   docker-build:
     script: |
