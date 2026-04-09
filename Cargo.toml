@@ -3,11 +3,11 @@ resolver = "2"
 members = [
     "apps/templates-cli",
     "apps/fastapi-ai",
+    "apps/go-clean",
 ]
 
 # Placeholder members for later phases (commented out until each phase
-# creates its crate). Uncomment as Phase C / D land.
-# Phase C: "apps/go-clean",
+# creates its crate). Uncomment as Phase D lands.
 # Phase D: "apps/go-modular",
 
 [workspace.package]
@@ -42,7 +42,7 @@ tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt", "json"]
 axum        = { version = "0.8.8", features = ["macros", "tokio"] }
 tokio       = { version = "1.51.0", features = ["full"] }
 tower       = "0.5"
-tower-http  = { version = "0.6.8", features = ["cors", "request-id", "trace", "util"] }
+tower-http  = { version = "0.6.8", features = ["cors", "request-id", "trace", "util", "compression-gzip", "set-header", "timeout"] }
 sqlx        = { version = "0.8.6", default-features = false, features = ["postgres", "runtime-tokio-rustls", "uuid", "chrono", "macros", "migrate"] }
 http        = "1"
 async-trait = "0.1"
@@ -68,6 +68,12 @@ async-openai = { version = "0.34.0", features = ["chat-completion", "rustls"] }
 utoipa             = { version = "5.4.0", features = ["axum_extras", "chrono", "uuid"] }
 utoipa-axum        = "0.2.0"
 utoipa-swagger-ui  = { version = "9", features = ["axum"] }
+
+# Phase C (go-clean) additions — JWT + bcrypt + rate limiting.
+# Every version below was verified against docs.rs on 2026-04-09.
+jsonwebtoken       = { version = "10.3.0", default-features = false, features = ["rust_crypto"] }
+bcrypt             = "0.19.0"
+tower_governor     = "0.8.0"
 
 # Test-only
 insta       = "1.47.2"
