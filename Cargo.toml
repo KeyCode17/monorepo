@@ -2,9 +2,9 @@
 resolver = "2"
 members = [
     "apps/templates-cli",
-    "apps/fastapi-ai",
-    "apps/go-clean",
-    "apps/go-modular",
+    "apps/rust-ai",
+    "apps/rust-clean",
+    "apps/rust-modular",
 ]
 
 [workspace.package]

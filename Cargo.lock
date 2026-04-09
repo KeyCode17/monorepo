@@ -1326,46 +1326,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "fastapi-ai"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "async-openai",
- "async-trait",
- "axum",
- "chrono",
- "dotenvy",
- "figment",
- "http",
- "http-body-util",
- "insta",
- "opentelemetry",
- "opentelemetry-otlp",
- "opentelemetry_sdk",
- "pretty_assertions",
- "prometheus",
- "reqwest",
- "rstest",
- "serde",
- "serde_json",
- "sqlx",
- "testcontainers",
- "testcontainers-modules",
- "thiserror 2.0.18",
- "tokio",
- "tower",
- "tower-http",
- "tracing",
- "tracing-opentelemetry",
- "tracing-subscriber",
- "utoipa",
- "utoipa-axum",
- "utoipa-swagger-ui",
- "uuid",
- "wiremock",
-]
-
-[[package]]
 name = "fastrand"
 version = "2.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1658,92 +1618,6 @@ name = "glob"
 version = "0.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0cc23270f6e1808e30a928bdc84dea0b9b4136a8bc82338574f23baf47bbd280"
-
-[[package]]
-name = "go-clean"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "async-trait",
- "axum",
- "bcrypt",
- "chrono",
- "dotenvy",
- "figment",
- "http",
- "http-body-util",
- "insta",
- "jsonwebtoken",
- "opentelemetry",
- "opentelemetry-otlp",
- "opentelemetry_sdk",
- "pretty_assertions",
- "prometheus",
- "reqwest",
- "rstest",
- "serde",
- "serde_json",
- "sqlx",
- "testcontainers",
- "testcontainers-modules",
- "thiserror 2.0.18",
- "tokio",
- "tower",
- "tower-http",
- "tower_governor",
- "tracing",
- "tracing-opentelemetry",
- "tracing-subscriber",
- "uuid",
-]
-
-[[package]]
-name = "go-modular"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "argon2",
- "askama",
- "async-trait",
- "axum",
- "chrono",
- "clap",
- "criterion",
- "dotenvy",
- "figment",
- "hex",
- "http",
- "http-body-util",
- "insta",
- "jsonwebtoken",
- "lettre",
- "opentelemetry",
- "opentelemetry-otlp",
- "opentelemetry_sdk",
- "pretty_assertions",
- "prometheus",
- "reqwest",
- "rstest",
- "serde",
- "serde_json",
- "sha2 0.11.0",
- "sqlx",
- "testcontainers",
- "testcontainers-modules",
- "thiserror 2.0.18",
- "tokio",
- "tower",
- "tower-http",
- "tower_governor",
- "tracing",
- "tracing-opentelemetry",
- "tracing-subscriber",
- "utoipa",
- "utoipa-axum",
- "utoipa-swagger-ui",
- "uuid",
- "validator",
-]
 
 [[package]]
 name = "governor"
@@ -3577,6 +3451,84 @@ dependencies = [
 ]
 
 [[package]]
+name = "rust-ai"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-openai",
+ "async-trait",
+ "axum",
+ "chrono",
+ "dotenvy",
+ "figment",
+ "http",
+ "http-body-util",
+ "insta",
+ "opentelemetry",
+ "opentelemetry-otlp",
+ "opentelemetry_sdk",
+ "pretty_assertions",
+ "prometheus",
+ "reqwest",
+ "rstest",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "testcontainers",
+ "testcontainers-modules",
+ "thiserror 2.0.18",
+ "tokio",
+ "tower",
+ "tower-http",
+ "tracing",
+ "tracing-opentelemetry",
+ "tracing-subscriber",
+ "utoipa",
+ "utoipa-axum",
+ "utoipa-swagger-ui",
+ "uuid",
+ "wiremock",
+]
+
+[[package]]
+name = "rust-clean"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "axum",
+ "bcrypt",
+ "chrono",
+ "dotenvy",
+ "figment",
+ "http",
+ "http-body-util",
+ "insta",
+ "jsonwebtoken",
+ "opentelemetry",
+ "opentelemetry-otlp",
+ "opentelemetry_sdk",
+ "pretty_assertions",
+ "prometheus",
+ "reqwest",
+ "rstest",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "testcontainers",
+ "testcontainers-modules",
+ "thiserror 2.0.18",
+ "tokio",
+ "tower",
+ "tower-http",
+ "tower_governor",
+ "tracing",
+ "tracing-opentelemetry",
+ "tracing-subscriber",
+ "uuid",
+]
+
+[[package]]
 name = "rust-embed"
 version = "8.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3608,6 +3560,54 @@ checksum = "5bcdef0be6fe7f6fa333b1073c949729274b05f123a0ad7efcb8efd878e5c3b1"
 dependencies = [
  "sha2 0.10.9",
  "walkdir",
+]
+
+[[package]]
+name = "rust-modular"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "argon2",
+ "askama",
+ "async-trait",
+ "axum",
+ "chrono",
+ "clap",
+ "criterion",
+ "dotenvy",
+ "figment",
+ "hex",
+ "http",
+ "http-body-util",
+ "insta",
+ "jsonwebtoken",
+ "lettre",
+ "opentelemetry",
+ "opentelemetry-otlp",
+ "opentelemetry_sdk",
+ "pretty_assertions",
+ "prometheus",
+ "reqwest",
+ "rstest",
+ "serde",
+ "serde_json",
+ "sha2 0.11.0",
+ "sqlx",
+ "testcontainers",
+ "testcontainers-modules",
+ "thiserror 2.0.18",
+ "tokio",
+ "tower",
+ "tower-http",
+ "tower_governor",
+ "tracing",
+ "tracing-opentelemetry",
+ "tracing-subscriber",
+ "utoipa",
+ "utoipa-axum",
+ "utoipa-swagger-ui",
+ "uuid",
+ "validator",
 ]
 
 [[package]]
