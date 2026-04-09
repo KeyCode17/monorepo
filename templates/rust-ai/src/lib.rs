@@ -49,9 +49,12 @@ impl AppState {
         let db = Database::connect(&env.database_url)
             .await
             .context("connect to database")?;
-        let openai_client = async_openai::Client::with_config(
-            async_openai::config::OpenAIConfig::new().with_api_key(env.openai_api_key.clone()),
-        );
+        let mut openai_cfg = async_openai::config::OpenAIConfig::new()
+            .with_api_key(env.openai_api_key.clone());
+        if let Ok(base) = std::env::var("OPENAI_API_BASE") {
+            openai_cfg = openai_cfg.with_api_base(base);
+        }
+        let openai_client = async_openai::Client::with_config(openai_cfg);
         let repo = Arc::new(GreetingRepoOpenAI::new(openai_client));
         let greeting_service = Arc::new(GreetingService::new(repo));
         Ok(Self {
