@@ -484,7 +484,12 @@ impl AuthService {
         };
         let expiry_minutes = VERIFICATION_TTL.as_secs() / 60;
         self.mailer
-            .send_verification_email(&user.email, &display_name, &verification_url, expiry_minutes)
+            .send_verification_email(
+                &user.email,
+                &display_name,
+                &verification_url,
+                expiry_minutes,
+            )
             .await?;
         Ok(())
     }

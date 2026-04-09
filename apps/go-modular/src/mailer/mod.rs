@@ -127,8 +127,9 @@ impl Mailer {
         let builder_result = match cfg.smtp_port {
             587 => AsyncSmtpTransport::<Tokio1Executor>::starttls_relay(host).map(|b| b.port(587)),
             465 => AsyncSmtpTransport::<Tokio1Executor>::relay(host).map(|b| b.port(465)),
-            25 | 1025 => Ok(AsyncSmtpTransport::<Tokio1Executor>::builder_dangerous(host)
-                .port(cfg.smtp_port)),
+            25 | 1025 => Ok(
+                AsyncSmtpTransport::<Tokio1Executor>::builder_dangerous(host).port(cfg.smtp_port),
+            ),
             other => {
                 // Default to STARTTLS for any other port — safest choice.
                 AsyncSmtpTransport::<Tokio1Executor>::starttls_relay(host).map(|b| b.port(other))
