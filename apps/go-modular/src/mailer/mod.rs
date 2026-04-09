@@ -124,15 +124,36 @@ impl Mailer {
             None
         };
 
-        let builder_result = match cfg.smtp_port {
-            587 => AsyncSmtpTransport::<Tokio1Executor>::starttls_relay(host).map(|b| b.port(587)),
-            465 => AsyncSmtpTransport::<Tokio1Executor>::relay(host).map(|b| b.port(465)),
-            25 | 1025 => Ok(
-                AsyncSmtpTransport::<Tokio1Executor>::builder_dangerous(host).port(cfg.smtp_port),
-            ),
-            other => {
-                // Default to STARTTLS for any other port — safest choice.
-                AsyncSmtpTransport::<Tokio1Executor>::starttls_relay(host).map(|b| b.port(other))
+        // Localhost plaintext escape hatch: when the host is a
+        // loopback address AND the port is NOT a standard TLS
+        // port (587/465), fall through to plaintext. This
+        // supports dev tooling like mailhog that listens on
+        // random host-mapped ports under testcontainers.
+        //
+        // Production safety: the config validator rejects
+        // plaintext SMTP ports (25/1025) in production mode, and
+        // a local operator running on 587 or 465 still gets
+        // proper TLS via the regular match arms below.
+        let is_loopback = matches!(host, "127.0.0.1" | "localhost" | "::1");
+        let is_tls_port = matches!(cfg.smtp_port, 587 | 465);
+
+        let builder_result = if is_loopback && !is_tls_port {
+            Ok(AsyncSmtpTransport::<Tokio1Executor>::builder_dangerous(host).port(cfg.smtp_port))
+        } else {
+            match cfg.smtp_port {
+                587 => {
+                    AsyncSmtpTransport::<Tokio1Executor>::starttls_relay(host).map(|b| b.port(587))
+                }
+                465 => AsyncSmtpTransport::<Tokio1Executor>::relay(host).map(|b| b.port(465)),
+                25 | 1025 => Ok(
+                    AsyncSmtpTransport::<Tokio1Executor>::builder_dangerous(host)
+                        .port(cfg.smtp_port),
+                ),
+                other => {
+                    // Default to STARTTLS for any other port — safest choice.
+                    AsyncSmtpTransport::<Tokio1Executor>::starttls_relay(host)
+                        .map(|b| b.port(other))
+                }
             }
         };
 

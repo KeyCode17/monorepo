@@ -881,7 +881,7 @@ after the post-Phase-D cleanup work:
 | **D-IT-4** session-middleware perf bench | ✅ Completed (target met, no cache needed) | see §10.6.1 below |
 | **D-IT-5** live-boot smoke test | ✅ Completed | `9b94e48f` |
 | **D-DOC-1** full utoipa annotations | ✅ Completed | `d30bc49f` |
-| **D-SMTP-4** mailhog integration test | In progress | see subsequent commits |
+| **D-SMTP-4** mailhog integration test | ✅ Completed | post-commit below |
 | **CI pipeline** | In progress | see subsequent commits |
 
 #### 10.6.1 D-IT-4 session-middleware perf bench results
