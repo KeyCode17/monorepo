@@ -225,7 +225,7 @@ impl Mailer {
 #[derive(Template)]
 #[template(
     ext = "html",
-    source = r#"<!DOCTYPE html>
+    source = r#"{% raw %}<!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="utf-8" />
@@ -250,7 +250,7 @@ impl Mailer {
       request this, you can safely ignore this email.
     </p>
   </body>
-</html>"#
+</html>{% endraw %}"#
 )]
 struct EmailVerificationTemplate<'a> {
     user_name: &'a str,
