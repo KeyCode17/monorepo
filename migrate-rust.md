@@ -882,7 +882,7 @@ after the post-Phase-D cleanup work:
 | **D-IT-5** live-boot smoke test | ✅ Completed | `9b94e48f` |
 | **D-DOC-1** full utoipa annotations | ✅ Completed | `d30bc49f` |
 | **D-SMTP-4** mailhog integration test | ✅ Completed | post-commit below |
-| **CI pipeline** | In progress | see subsequent commits |
+| **CI pipeline** | ✅ Completed | `.github/workflows/ci.yml` |
 
 #### 10.6.1 D-IT-4 session-middleware perf bench results
 

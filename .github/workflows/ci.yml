@@ -1,0 +1,92 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+  # Disable the cargo-home incremental build because it adds
+  # noise to the target/ cache without meaningful speedups on CI.
+  CARGO_INCREMENTAL: 0
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  fmt:
+    name: cargo fmt
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust (rustfmt)
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+      - name: cargo fmt --check
+        run: cargo fmt --check
+
+  clippy:
+    name: cargo clippy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust (clippy)
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      - name: Cache cargo + target
+        uses: Swatinem/rust-cache@v2
+        with:
+          # Share the cache across the fmt/clippy/test jobs by
+          # pinning a common prefix key.
+          shared-key: "phase-d-ci"
+      - name: cargo clippy --workspace
+        run: cargo clippy --workspace --all-targets -- -D warnings
+
+  test:
+    name: cargo test
+    runs-on: ubuntu-latest
+    # Postgres service container — pinned per the post-Phase-D
+    # CI task. The workspace integration tests (go-modular +
+    # go-clean + fastapi-ai) currently use the `testcontainers`
+    # crate to spin up disposable Postgres + mailhog containers
+    # per-test instead of hitting this service container. The
+    # service container is kept here as:
+    #   (a) a guaranteed Docker-available smoke check on the
+    #       runner, and
+    #   (b) a future-proof fixture for any test that might need
+    #       a fixed DATABASE_URL (e.g. compile-time sqlx::query!
+    #       checked queries, which we don't use today).
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/postgres
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+      - name: Cache cargo + target
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: "phase-d-ci"
+      - name: cargo build --workspace
+        run: cargo build --workspace --all-targets
+      - name: cargo test --workspace
+        run: cargo test --workspace --all-targets
