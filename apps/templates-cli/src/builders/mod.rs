@@ -462,7 +462,7 @@ fn go_modular_custom(ctx: &BuildCtx<'_>) -> Result<()> {
 }
 
 /// Rust port of fastapi-ai: rust-ai, port 8080. Custom pass replaces
-/// the Rust underscore crate name (`rust_ai`) with the snake_case
+/// the Rust underscore crate name (`rust_ai`) with the `snake_case`
 /// template variable.
 pub const RUST_AI: BuilderSpec = BuilderSpec {
     name: "rust-ai",
