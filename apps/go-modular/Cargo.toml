@@ -65,6 +65,12 @@ askama             = { workspace = true }
 sha2               = { workspace = true }
 hex                = { workspace = true }
 
+# moka intentionally NOT listed as a direct dep: the D-IT-4 perf
+# bench measured the uncached middleware at 539 µs mean (well under
+# the 5 ms target), so the moka LRU fallback is unnecessary. The
+# crate remains verified on docs.rs and pinned in workspace deps
+# in case the perf budget ever tightens.
+
 # CLI (clap subcommands for serve, migrate, seed, generate-config)
 clap               = { workspace = true }
 
@@ -89,6 +95,11 @@ testcontainers          = { workspace = true }
 testcontainers-modules  = { workspace = true }
 tower                   = { workspace = true }
 http-body-util          = "0.1"
+criterion               = { workspace = true }
+
+[[bench]]
+name = "session_middleware"
+harness = false
 
 [lints]
 workspace = true

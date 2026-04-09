@@ -93,6 +93,15 @@ validator          = { version = "0.20.0", features = ["derive"] }
 sha2               = "0.11.0"
 hex                = "0.4.3"
 
+# Post-Phase-D follow-ups (verified docs.rs 2026-04-09):
+# - criterion 0.8.2: perf benchmarks. Supports `b.to_async(&runtime).iter(...)`
+#   via AsyncBencher, plus iter_batched for shared state across iterations.
+# - moka 0.12.15: async LRU cache with TTL for the optional session-check
+#   middleware cache. Requires the `future` feature for the async API.
+# - reqwest was already in test dev-deps; we reuse it for the perf test.
+criterion          = { version = "0.8.2", features = ["async_tokio"] }
+moka               = { version = "0.12.15", features = ["future"] }
+
 # Test-only
 insta       = "1.47.2"
 rstest      = "0.23"
