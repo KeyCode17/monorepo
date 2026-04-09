@@ -85,7 +85,8 @@ async fn spawn_state() -> (AppState, ContainerAsync<Postgres>) {
         .await
         .expect("postgres host port");
 
-    let database_url = format!("postgres://postgres:postgres@127.0.0.1:{host_port}/rust_clean_test");
+    let database_url =
+        format!("postgres://postgres:postgres@127.0.0.1:{host_port}/rust_clean_test");
     let pool = PgPoolOptions::new()
         .max_connections(5)
         .connect(&database_url)

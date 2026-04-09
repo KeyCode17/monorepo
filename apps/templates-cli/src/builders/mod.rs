@@ -524,7 +524,11 @@ pub const RUST_MODULAR: BuilderSpec = BuilderSpec {
 };
 
 fn rust_modular_custom(ctx: &BuildCtx<'_>) -> Result<()> {
-    replace_in_files(ctx.target, "rust_modular", "{{ package_name | snake_case }}")?;
+    replace_in_files(
+        ctx.target,
+        "rust_modular",
+        "{{ package_name | snake_case }}",
+    )?;
     Ok(())
 }
 
