@@ -2,14 +2,13 @@
 # yaml-language-server: $schema=https://moonrepo.dev/schemas/project.json
 $schema: "https://moonrepo.dev/schemas/project.json"
 
+# Phase C: this project is now a Rust crate. moon doesn't have a
+# first-class rust toolchain entry, so the language is "unknown" and
+# tasks shell out to cargo directly.
 layer: application
-language: go
-toolchains:
-  default: null
-stack: backend
-tags: ["app", "backend"]
+language: unknown
+tags: ["app", "rust"]
 
-# Overrides the name (identifier) of the project
 id: "go-clean"
 
 project:
@@ -17,68 +16,74 @@ project:
   description: "_CHANGE_ME_DESCRIPTION_"
 
 tasks:
-  dev:
-    command: "air -c air.toml"
-    deps: [kill-port]
-    options:
-      envFile: "/.env"
-
   build:
-    command: "go build -o build/go-clean"
-    outputs: ["build/go-clean"]
-    deps: [tidy]
+    command: "cargo build -p go-clean"
+    options:
+      runFromWorkspaceRoot: true
+
+  build-release:
+    command: "cargo build -p go-clean --release"
+    options:
+      runFromWorkspaceRoot: true
+
+  dev:
+    command: "cargo run -p go-clean"
+    options:
+      runFromWorkspaceRoot: true
+      envFile: "apps/go-clean/.env"
 
   start:
-    command: "build/go-clean"
+    command: "cargo run -p go-clean --release"
+    options:
+      runFromWorkspaceRoot: true
+      envFile: "apps/go-clean/.env"
 
   test:
-    script: "go test ./... -count=1"
-    deps: ["tidy", "generate-mock"]
+    command: "cargo test -p go-clean"
     options:
-      cache: false
+      runFromWorkspaceRoot: true
 
-  fmt:
-    command: "gofmt -s -w ."
+  lint:
+    command: "cargo clippy -p go-clean --all-targets -- -D warnings"
     options:
-      cache: false
+      runFromWorkspaceRoot: true
 
-  generate-mock:
-    command: "mockery"
+  fmt-check:
+    command: "cargo fmt -p go-clean --check"
     options:
-      cache: false
+      runFromWorkspaceRoot: true
 
-  tidy:
-    command: "go mod tidy"
-
-  kill-port:
-    # This is a hack for killing the listen port before starting the app
-    command: "pnpm --package=kill-port-process-cli dlx kill-port 8000"
-    deps: [tidy]
+  # Apply all pending database migrations via sqlx-cli.
+  # Requires `cargo install sqlx-cli --no-default-features --features postgres`.
+  migrate:
+    command: "sqlx migrate run --source apps/go-clean/migrations"
     options:
-      internal: true
+      runFromWorkspaceRoot: true
+      envFile: "apps/go-clean/.env"
 
-  migration-create:
-    command: "go run ./cmd/ migrate create"
-
-  migration-up:
-    command: "go run ./cmd/ migrate up"
-
-  migration-down:
-    command: "go run ./cmd/ migrate down"
-
-  migration-reset:
-    command: "go run ./cmd/ migrate reset"
-
-  migration-version:
-    command: "go run ./cmd/ migrate version"
-
-  seed:
-    command: "go run ./cmd/ seed"
-
-  generate-swagger:
-    script: "swag init -o docs --parseDependency"
+  migrate-create:
+    command: "sqlx migrate add --source apps/go-clean/migrations"
     options:
-      cache: false
+      runFromWorkspaceRoot: true
+      envFile: "apps/go-clean/.env"
+
+  migrate-down:
+    command: "sqlx migrate revert --source apps/go-clean/migrations"
+    options:
+      runFromWorkspaceRoot: true
+      envFile: "apps/go-clean/.env"
+
+  migrate-reset:
+    command: "sqlx database reset --source apps/go-clean/migrations -y"
+    options:
+      runFromWorkspaceRoot: true
+      envFile: "apps/go-clean/.env"
+
+  check-in-dance:
+    command: 'echo "All is good, ready to go!"'
+    deps: ["build", "migrate"]
+    options:
+      shell: true
 
   docker-build:
     script: |
