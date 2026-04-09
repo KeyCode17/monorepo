@@ -1,18 +1,15 @@
-//! go-modular entrypoint.
-//!
-//! At D-INFRA-11 `main()` delegates straight to `go_modular::serve()`.
-//! D-CLI-1..5 replaces this with a clap subcommand dispatcher (serve,
-//! migrate, seed, generate-config) that still routes `serve` through
-//! the same `go_modular::serve()` entry.
+//! go-modular entrypoint — delegates to `cli::run_cli`.
 
 use std::process::ExitCode;
 
-use go_modular::serve;
+use clap::Parser;
+use go_modular::cli::{Cli, run_cli};
 
 #[tokio::main]
 async fn main() -> ExitCode {
-    if let Err(err) = serve().await {
-        eprintln!("go-modular: fatal error: {err:#}");
+    let cli = Cli::parse();
+    if let Err(err) = run_cli(cli).await {
+        eprintln!("go-modular: error: {err:#}");
         return ExitCode::FAILURE;
     }
     ExitCode::SUCCESS
