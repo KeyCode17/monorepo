@@ -43,6 +43,11 @@ tasks:
     options:
       runFromWorkspaceRoot: true
 
+  smoke:
+    command: "cargo test -p go-modular --test smoke_boot"
+    options:
+      runFromWorkspaceRoot: true
+
   lint:
     command: "cargo clippy -p go-modular --all-targets -- -D warnings"
     options:
