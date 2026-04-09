@@ -3,10 +3,10 @@
 $schema: 'https://moonrepo.dev/schemas/template.json'
 
 # REQUIRED: Name of the template in a human readable format.
-title: 'Go Application'
+title: 'Rust Clean Architecture Application'
 
 # REQUIRED: Description of what the template is for and other relevant information.
-description: 'Basic Go application template'
+description: 'Clean architecture Rust/axum REST API with JWT auth, sqlx, and OpenAPI.'
 
 # Destination path for the package.
 destination: 'apps/[package_name]'
@@ -16,18 +16,18 @@ destination: 'apps/[package_name]'
 variables:
   package_name:
     type: 'string'
-    default: 'go-app'
+    default: 'my-clean-app'
     prompt: 'Package name (identifier)?'
     required: true
 
   package_description:
     type: 'string'
-    default: 'My backend application'
+    default: 'Clean architecture Rust application'
     prompt: 'Package description?'
     required: true
 
   port_number:
     type: 'number'
-    default: 8000
+    default: 8080
     prompt: 'Port number?'
     required: true
