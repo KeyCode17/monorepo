@@ -61,6 +61,10 @@ tower_governor     = { workspace = true }
 argon2             = { workspace = true }
 askama             = { workspace = true }
 
+# SHA-256 for refresh/access/one-time token hashing (D-OPEN-1).
+sha2               = { workspace = true }
+hex                = { workspace = true }
+
 # CLI (clap subcommands for serve, migrate, seed, generate-config)
 clap               = { workspace = true }
 

@@ -1,20 +1,20 @@
 //! Router composition.
 //!
-//! At D-INFRA-11 the router has:
+//! Router surface:
 //! - `GET /healthz`          — liveness probe
 //! - `GET /api-docs`         — Scalar/Swagger UI (placeholder redirect)
 //! - `GET /api/openapi.json` — `OpenAPI` spec (placeholder)
+//! - `/api/v1/users/*`       — user module (JWT-protected)
+//! - `/api/v1/auth/*`        — auth module (mix of public + protected)
 //! - `/*` catch-all          — SPA-style 404 for anything else
-//!
-//! Module routes from D-USER-* and D-AUTH-* mount under `/api/v1/`
-//! via `.merge(user_module::routes())` and `.merge(auth_module::routes())`
-//! calls that land in later phases.
 
 use axum::Router;
+use axum::middleware::from_fn_with_state;
 use axum::routing::get;
 
 use crate::AppState;
 use crate::middleware as mw;
+use crate::modules::auth::{self, require_auth};
 use crate::modules::user;
 use crate::server::handler;
 
@@ -23,13 +23,21 @@ pub fn build_router(state: AppState) -> Router {
     let config = state.config.clone();
     let app_cfg = &config.app;
 
-    // Module routes under /api/v1. User module is JWT-protected in
-    // Go; the `require_auth` middleware lands in D-AUTH-14 and will
-    // be applied here as `.route_layer(from_fn_with_state(...))`.
-    let api_v1 = Router::new().nest("/users", user::routes());
+    // User module: all 5 endpoints are JWT-protected in Go, so we
+    // wrap the whole user router with the `require_auth` session-
+    // check middleware from D-AUTH-14.
+    let user_router = user::routes().route_layer(from_fn_with_state(state.clone(), require_auth));
 
-    // Infra routes (non-/api/v1).
-    // TODO(D-AUTH-13): merge auth module routes under /api/v1/auth.
+    // Auth module: public routes (signin, verify-email, token/refresh,
+    // verification/initiate, verification/validate, POST /password,
+    // session POST/GET) + protected routes (password PUT, session
+    // PUT/DELETE, verification revoke/resend).
+    let auth_router = auth::public_routes().merge(auth::protected_routes(state.clone()));
+
+    let api_v1 = Router::new()
+        .nest("/users", user_router)
+        .nest("/auth", auth_router);
+
     let infra_routes: Router<AppState> = Router::new()
         .route("/healthz", get(handler::healthz))
         .route("/api-docs", get(handler::api_docs))

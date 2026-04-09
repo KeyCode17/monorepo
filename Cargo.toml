@@ -87,6 +87,11 @@ argon2             = "0.5.3"
 askama             = "0.15.6"
 lettre             = { version = "0.11.21", default-features = false, features = ["smtp-transport", "tokio1", "tokio1-rustls-tls", "builder", "hostname", "pool"] }
 validator          = { version = "0.20.0", features = ["derive"] }
+# sha2 for token hashing (SHA-256 of refresh/access/one-time tokens).
+# hex used by the `sha256_hex` helper for one_time_tokens.token_hash
+# (TEXT column). Both docs.rs-verified 2026-04-09.
+sha2               = "0.11.0"
+hex                = "0.4.3"
 
 # Test-only
 insta       = "1.47.2"
