@@ -6,7 +6,7 @@
 //! the Python class doesn't declare but that live in the database).
 //!
 //! Schema (verified against
-//! `apps/fastapi-ai/app/database/migration/versions/989eb3ef44de_create_users_table.py`
+//! `apps/{{ package_name | kebab_case }}/app/database/migration/versions/989eb3ef44de_create_users_table.py`
 //! and the running `{{ package_name | snake_case }}` database):
 //!
 //! ```sql

@@ -1,6 +1,6 @@
-//! Rust port of the Zero One Group go-modular service (Phase D).
+//! Rust port of the Zero One Group {{ package_name | kebab_case }} service (Phase D).
 //!
-//! Corrected-port rewrite of `apps/go-modular` (originally Go/Echo) to
+//! Corrected-port rewrite of `apps/{{ package_name | kebab_case }}` (originally Go/Echo) to
 //! Rust/axum. 19 HTTP endpoints (14 auth + 5 user) with 8 audit-driven
 //! behavior fixes vs the Go original.
 //!

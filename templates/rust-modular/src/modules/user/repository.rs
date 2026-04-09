@@ -1,5 +1,5 @@
 //! User repository — port of
-//! `apps/go-modular/modules/user/repository/repository.go`.
+//! `apps/{{ package_name | kebab_case }}/modules/user/repository/repository.go`.
 //!
 //! sqlx-backed CRUD against the 13-column `public.users` table.
 //! UUIDs are generated app-side (`Uuid::now_v7()`) because Postgres

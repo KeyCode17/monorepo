@@ -1,6 +1,6 @@
 //! User module — 5 CRUD endpoints (keep-track).
 //!
-//! Port of `apps/go-modular/modules/user/` from Go to Rust. The
+//! Port of `apps/{{ package_name | kebab_case }}/modules/user/` from Go to Rust. The
 //! module follows a strict repository -> service -> handler layering.
 
 pub mod handler;

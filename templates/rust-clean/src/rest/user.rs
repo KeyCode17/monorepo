@@ -1,6 +1,6 @@
 //! User handlers: 5 endpoints under `/api/v1/users`.
 //!
-//! Mirrors `apps/go-clean/internal/rest/user.go`. All 5 handlers are
+//! Mirrors `apps/{{ package_name | kebab_case }}/internal/rest/user.go`. All 5 handlers are
 //! protected by the `require_auth` middleware wired at the nested
 //! router in `rest::build`.
 

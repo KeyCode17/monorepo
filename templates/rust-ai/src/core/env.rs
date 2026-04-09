@@ -22,7 +22,7 @@ use serde::Deserialize;
 ///
 /// Env var mapping (figment lowercases the shell key automatically):
 /// - `ML_PREFIX_API` → `ml_prefix_api`
-/// - `APP_NAME` → `app_name` (default `"fastapi-ai"`)
+/// - `APP_NAME` → `app_name` (default `"{{ package_name | kebab_case }}"`)
 /// - `APP_ENVIRONMENT` → `app_environment` (default `"development"`)
 /// - `DATABASE_URL` → `database_url`
 /// - `OPENAI_API_KEY` → `openai_api_key`
@@ -43,7 +43,7 @@ pub struct Env {
 }
 
 fn default_app_name() -> String {
-    "fastapi-ai".to_string()
+    "{{ package_name | kebab_case }}".to_string()
 }
 
 fn default_app_environment() -> String {

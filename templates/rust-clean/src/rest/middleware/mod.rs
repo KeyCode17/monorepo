@@ -1,4 +1,4 @@
-//! REST middleware. Mirrors `apps/go-clean/internal/rest/middleware/`.
+//! REST middleware. Mirrors `apps/{{ package_name | kebab_case }}/internal/rest/middleware/`.
 //!
 //! The only middleware that needs handler-level state is the JWT
 //! validator — everything else (CORS, compression, timeout, request ID,

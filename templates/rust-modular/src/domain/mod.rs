@@ -1,7 +1,7 @@
 //! Domain types shared across modules.
 //!
 //! - `error` — `AppError` enum with `IntoResponse` impl that matches
-//!   go-modular's `{"error": "..."}` shape.
+//!   {{ package_name | kebab_case }}'s `{"error": "..."}` shape.
 //! - `response` — `MessageResponse` for `{"message": "..."}` payloads.
 
 pub mod error;

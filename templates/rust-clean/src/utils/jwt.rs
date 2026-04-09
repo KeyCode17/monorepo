@@ -1,4 +1,4 @@
-//! JWT helper. Mirrors `apps/go-clean/utils/jwt.go`.
+//! JWT helper. Mirrors `apps/{{ package_name | kebab_case }}/utils/jwt.go`.
 //!
 //! - Access token: HS256-signed `JwtClaim` with `exp` = now + TTL minutes
 //! - Refresh token: HS256-signed `RefreshClaim` with `exp` = now + 24h

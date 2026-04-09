@@ -1,4 +1,4 @@
-//! Response envelope types. Mirrors `apps/go-clean/domain/response.go`.
+//! Response envelope types. Mirrors `apps/{{ package_name | kebab_case }}/domain/response.go`.
 //!
 //! Field ordering matches the Go struct exactly so serde produces
 //! byte-identical JSON:

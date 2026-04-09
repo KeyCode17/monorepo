@@ -1,5 +1,5 @@
 //! REST handlers + middleware + router composition.
-//! Mirrors `apps/go-clean/internal/rest/`.
+//! Mirrors `apps/{{ package_name | kebab_case }}/internal/rest/`.
 
 pub mod auth;
 pub mod middleware;
@@ -22,7 +22,7 @@ use crate::rest::middleware::jwt::require_auth;
 
 /// Build the full router with all middleware + route groups.
 ///
-/// Middleware ordering mirrors `apps/go-clean/main.go` top-to-bottom:
+/// Middleware ordering mirrors `apps/{{ package_name | kebab_case }}/main.go` top-to-bottom:
 /// 1. `RequestID` (injects `X-Request-ID`)
 /// 2. Structured logger (`TraceLayer` → tracing spans per request)
 /// 3. CORS (permissive)

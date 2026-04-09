@@ -1,6 +1,6 @@
 //! User models — port of `modules/user/models/{model,schema}.go`.
 //!
-//! Note: go-modular's Go `models/schema.go` only defines
+//! Note: {{ package_name | kebab_case }}'s Go `models/schema.go` only defines
 //! `UserCreateRequest` (name + email). `UpdateUser` reuses the same
 //! request shape in the Go handler (see `handler_update_user`). We
 //! match that faithfully.
@@ -15,7 +15,7 @@ use validator::Validate;
 /// `UserMetadata` — the JSONB `metadata` column on the users table.
 ///
 /// Only `timezone` is used by the current Go codebase (set to "UTC"
-/// by default in `CreateUser`). Add fields here if go-modular grows
+/// by default in `CreateUser`). Add fields here if {{ package_name | kebab_case }} grows
 /// new metadata keys.
 #[derive(Debug, Clone, Serialize, Deserialize, Default, ToSchema)]
 pub struct UserMetadata {

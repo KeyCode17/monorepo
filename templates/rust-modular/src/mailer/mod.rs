@@ -11,7 +11,7 @@
 //! | 1025  | Plaintext (mailhog dev) | No (validator rejects) |
 //!
 //! Inline askama templates keep the Rust crate's template source
-//! separate from Go's `apps/go-modular/templates/` tree (which gets
+//! separate from Go's `apps/{{ package_name | kebab_case }}/templates/` tree (which gets
 //! `git rm`-ed in D-REL-1).
 //!
 //! **Graceful fallback**: if the transport can't be built (no host,

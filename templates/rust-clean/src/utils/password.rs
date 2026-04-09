@@ -1,4 +1,4 @@
-//! bcrypt password hashing. Mirrors `apps/go-clean/utils/bcrypt.go`.
+//! bcrypt password hashing. Mirrors `apps/{{ package_name | kebab_case }}/utils/bcrypt.go`.
 //!
 //! Uses `DEFAULT_COST` (matching Go's `bcrypt.DefaultCost`, currently 12).
 //! `hash` and `verify` are synchronous + CPU-bound, so handlers wrap

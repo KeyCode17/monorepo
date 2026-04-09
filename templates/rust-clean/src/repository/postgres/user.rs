@@ -1,4 +1,4 @@
-//! User repository. Mirrors `apps/go-clean/internal/repository/postgres/user.go`.
+//! User repository. Mirrors `apps/{{ package_name | kebab_case }}/internal/repository/postgres/user.go`.
 
 use chrono::{DateTime, Utc};
 use sqlx::PgPool;

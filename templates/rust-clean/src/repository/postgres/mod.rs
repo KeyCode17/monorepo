@@ -1,5 +1,5 @@
 //! Postgres-backed repositories.
-//! Mirrors `apps/go-clean/internal/repository/postgres/`.
+//! Mirrors `apps/{{ package_name | kebab_case }}/internal/repository/postgres/`.
 
 pub mod auth;
 pub mod user;

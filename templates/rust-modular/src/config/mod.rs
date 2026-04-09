@@ -1,6 +1,6 @@
-//! Config loader for go-modular.
+//! Config loader for {{ package_name | kebab_case }}.
 //!
-//! Ports `apps/go-modular/internal/config/` from Go to Rust:
+//! Ports `apps/{{ package_name | kebab_case }}/internal/config/` from Go to Rust:
 //!
 //! - `types.rs` mirrors `types.go` (6 sections, 39 fields after deleting
 //!   `JWTAlgorithm` and `SMTPSecure` per plan design decisions 3.4 and 3.5).

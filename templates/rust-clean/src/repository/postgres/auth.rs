@@ -1,4 +1,4 @@
-//! Auth repository. Mirrors `apps/go-clean/internal/repository/postgres/auth.go`.
+//! Auth repository. Mirrors `apps/{{ package_name | kebab_case }}/internal/repository/postgres/auth.go`.
 //!
 //! `authenticate_user` looks up a user by email, verifies the password
 //! against the bcrypt hash, and returns the (id, name, email) on success

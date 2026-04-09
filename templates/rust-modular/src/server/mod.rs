@@ -32,7 +32,7 @@ pub async fn serve() -> Result<()> {
     info!(
         service_name = %config.otel.otel_service_name,
         app_mode = %config.app.app_mode,
-        "go-modular starting"
+        "{{ package_name | kebab_case }} starting"
     );
 
     let state = AppState::from_config(config.clone()).await?;
@@ -47,7 +47,7 @@ pub async fn serve() -> Result<()> {
     let listener = TcpListener::bind(addr)
         .await
         .with_context(|| format!("bind {addr}"))?;
-    info!(%addr, "go-modular listening");
+    info!(%addr, "{{ package_name | kebab_case }} listening");
 
     axum::serve(
         listener,
@@ -58,7 +58,7 @@ pub async fn serve() -> Result<()> {
     .context("axum serve")?;
 
     crate::observer::shutdown_tracing();
-    info!("go-modular shut down cleanly");
+    info!("{{ package_name | kebab_case }} shut down cleanly");
     Ok(())
 }
 

@@ -1,5 +1,5 @@
 //! Default config values — byte-for-byte port of
-//! `apps/go-modular/internal/config/default.go`, except for the two
+//! `apps/{{ package_name | kebab_case }}/internal/config/default.go`, except for the two
 //! deletions (see `types.rs`).
 
 use super::types::{
@@ -56,7 +56,7 @@ pub fn default_config() -> Config {
             log_no_color: false,
         },
         otel: OTelConfig {
-            otel_service_name: "go-modular".to_string(),
+            otel_service_name: "{{ package_name | kebab_case }}".to_string(),
             otel_exporter_otlp_protocol: "http/protobuf".to_string(),
             otel_exporter_otlp_endpoint: "http://localhost:4318".to_string(),
             otel_exporter_otlp_headers: "authorization=YOUR_INGESTION_API_KEY".to_string(),

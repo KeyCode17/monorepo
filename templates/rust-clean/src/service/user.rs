@@ -1,4 +1,4 @@
-//! User service. Mirrors `apps/go-clean/service/user.go`.
+//! User service. Mirrors `apps/{{ package_name | kebab_case }}/service/user.go`.
 
 use std::sync::Arc;
 

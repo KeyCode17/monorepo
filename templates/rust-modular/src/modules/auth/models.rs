@@ -4,7 +4,7 @@
 //! - `Session::token_hash` is `Vec<u8>` (raw 32-byte SHA-256) instead
 //!   of Go's `string` (hex-ASCII). Wire-shape JSON drift is accepted
 //!   because session CRUD endpoints are never invoked externally by
-//!   go-modular itself — only internal signin code creates sessions.
+//!   {{ package_name | kebab_case }} itself — only internal signin code creates sessions.
 //! - `RefreshToken::token_hash` stays `Vec<u8>` but now holds the
 //!   raw 32-byte digest instead of the hex-ASCII it did in Go.
 //!

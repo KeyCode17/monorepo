@@ -1,4 +1,4 @@
-//! User domain types. Mirrors `apps/go-clean/domain/user.go`.
+//! User domain types. Mirrors `apps/{{ package_name | kebab_case }}/domain/user.go`.
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};

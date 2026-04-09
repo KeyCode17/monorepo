@@ -1,6 +1,6 @@
 //! Auth module — 14 endpoints (fix-track).
 //!
-//! Port of `apps/go-modular/modules/auth/` with the 8 corrected-port
+//! Port of `apps/{{ package_name | kebab_case }}/modules/auth/` with the 8 corrected-port
 //! fixes listed in the Phase D plan. Module layout:
 //!
 //! - `models` — DB model structs for the 4 auth tables plus

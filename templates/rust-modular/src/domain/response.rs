@@ -1,7 +1,7 @@
-//! Response envelope shapes used by go-modular.
+//! Response envelope shapes used by {{ package_name | kebab_case }}.
 //!
 //! Unlike Phase C go-clean (which wrapped every response in a
-//! `{code, data, message}` envelope), go-modular returns:
+//! `{code, data, message}` envelope), {{ package_name | kebab_case }} returns:
 //! - **Success**: raw struct JSON (no wrapping envelope)
 //! - **Updates / deletes**: `{"message": "..."}`
 //! - **Errors**: `{"error": "..."}` plus optional `{"details": ...}`

@@ -32,9 +32,9 @@ use crate::modules::user::models::{User, UserCreateRequest, UserMetadata};
 #[derive(OpenApi)]
 #[openapi(
     info(
-        title = "go-modular",
+        title = "{{ package_name | kebab_case }}",
         version = "0.1.0",
-        description = "Rust port of the Zero One Group go-modular service (Phase D). \
+        description = "Rust port of the Zero One Group {{ package_name | kebab_case }} service (Phase D). \
                        14 auth endpoints + 5 user endpoints with 8 corrected-port design fixes."
     ),
     paths(
@@ -194,7 +194,7 @@ mod tests {
         let doc = ApiDoc::openapi();
         let value: serde_json::Value = serde_json::to_value(&doc).expect("spec serializes");
 
-        assert_eq!(value["info"]["title"], "go-modular");
+        assert_eq!(value["info"]["title"], "{{ package_name | kebab_case }}");
         assert_eq!(
             value["components"]["securitySchemes"]["bearer_auth"]["scheme"],
             "bearer"

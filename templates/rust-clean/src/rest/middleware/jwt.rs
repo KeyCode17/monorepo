@@ -1,6 +1,6 @@
 //! JWT validation middleware.
 //!
-//! Mirrors `apps/go-clean/internal/rest/middleware/jwt.go::ValidateUserToken`.
+//! Mirrors `apps/{{ package_name | kebab_case }}/internal/rest/middleware/jwt.go::ValidateUserToken`.
 //! Reads the `Authorization` header, expects `Bearer <token>` format,
 //! validates the token with `utils::jwt::validate_token`, stores the
 //! decoded claim in request extensions, and calls `next.run(...)`.

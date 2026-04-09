@@ -1,4 +1,4 @@
-//! Rust port of the Zero One Group fastapi-ai service.
+//! Rust port of the Zero One Group {{ package_name | kebab_case }} service.
 //!
 //! Behavior-equivalent to the original Python `app/` package: same HTTP
 //! endpoints, same JSON shapes, same env vars, same `OTel` REPLICABLE
@@ -82,7 +82,7 @@ pub async fn serve() -> Result<()> {
     info!(
         app_name = %env.app_name,
         environment = %env.app_environment,
-        "fastapi-ai starting"
+        "{{ package_name | kebab_case }} starting"
     );
 
     // 2. Build state + router
@@ -102,7 +102,7 @@ pub async fn serve() -> Result<()> {
     let listener = TcpListener::bind(addr)
         .await
         .with_context(|| format!("bind {addr}"))?;
-    info!(%addr, "fastapi-ai listening");
+    info!(%addr, "{{ package_name | kebab_case }} listening");
 
     // 4. Serve until shutdown
     axum::serve(listener, router.into_make_service())
@@ -110,7 +110,7 @@ pub async fn serve() -> Result<()> {
         .await
         .context("axum serve")?;
 
-    info!("fastapi-ai shut down cleanly");
+    info!("{{ package_name | kebab_case }} shut down cleanly");
     Ok(())
 }
 

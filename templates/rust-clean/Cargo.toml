@@ -6,7 +6,7 @@ rust-version.workspace = true
 license.workspace      = true
 repository.workspace   = true
 publish.workspace      = true
-description  = "Behavior-equivalent Rust port of the Zero One Group go-clean service (Phase C)."
+description  = "{{ package_description }}"
 
 [[bin]]
 name = "{{ package_name | kebab_case }}"

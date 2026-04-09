@@ -1,6 +1,6 @@
-//! Rust port of the Zero One Group go-clean service.
+//! Rust port of the Zero One Group {{ package_name | kebab_case }} service.
 //!
-//! Behavior-equivalent to the original Go `apps/go-clean/` tree:
+//! Behavior-equivalent to the original Go `apps/{{ package_name | kebab_case }}/` tree:
 //! - 7 HTTP endpoints (health + auth login + 5-endpoint user CRUD)
 //! - Clean-architecture layers: `domain` → `service` → `repository` →
 //!   `rest`. Kept as four top-level modules so the code is discoverable
@@ -108,7 +108,7 @@ pub async fn serve() -> Result<()> {
     info!(
         service_name = %env.service_name,
         environment = %env.app_environment,
-        "go-clean starting"
+        "{{ package_name | kebab_case }} starting"
     );
 
     let state = AppState::from_env(env.clone()).await?;
@@ -122,7 +122,7 @@ pub async fn serve() -> Result<()> {
     let listener = TcpListener::bind(addr)
         .await
         .with_context(|| format!("bind {addr}"))?;
-    info!(%addr, "go-clean listening");
+    info!(%addr, "{{ package_name | kebab_case }} listening");
 
     axum::serve(
         listener,
@@ -132,7 +132,7 @@ pub async fn serve() -> Result<()> {
     .await
     .context("axum serve")?;
 
-    info!("go-clean shut down cleanly");
+    info!("{{ package_name | kebab_case }} shut down cleanly");
     Ok(())
 }
 

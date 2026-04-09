@@ -1,5 +1,5 @@
 //! Config struct definitions — byte-for-byte port of
-//! `apps/go-modular/internal/config/types.go` except for the two
+//! `apps/{{ package_name | kebab_case }}/internal/config/types.go` except for the two
 //! deletions locked in the Phase D plan:
 //!
 //! - [`AppConfig`] drops `JWTAlgorithm` (design 3.4: HS256 only).

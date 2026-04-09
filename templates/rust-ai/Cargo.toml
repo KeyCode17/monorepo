@@ -6,7 +6,7 @@ rust-version.workspace = true
 license.workspace      = true
 repository.workspace   = true
 publish.workspace      = true
-description  = "Behavior-equivalent Rust port of the Zero One Group fastapi-ai service (Phase B)."
+description  = "{{ package_description }}"
 
 [[bin]]
 name = "{{ package_name | kebab_case }}"

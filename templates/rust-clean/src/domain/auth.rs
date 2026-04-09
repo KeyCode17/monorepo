@@ -1,4 +1,4 @@
-//! Auth domain types. Mirrors `apps/go-clean/domain/auth.go`.
+//! Auth domain types. Mirrors `apps/{{ package_name | kebab_case }}/domain/auth.go`.
 
 use serde::{Deserialize, Serialize};
 

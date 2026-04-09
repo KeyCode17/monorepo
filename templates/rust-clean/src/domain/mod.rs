@@ -1,6 +1,6 @@
 //! Domain types.
 //!
-//! Mirrors `apps/go-clean/domain/`:
+//! Mirrors `apps/{{ package_name | kebab_case }}/domain/`:
 //! - `user` → `User`, `CreateUserRequest`, `UpdateUserRequest`, `UserFilter`
 //! - `auth` → `LoginRequest`, `LoginResponse`, `JwtClaim`
 //! - `response` → `Response`, `ResponseSingleData<T>`, `ResponseMultipleData<T>`, `Empty`

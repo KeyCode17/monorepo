@@ -1,4 +1,4 @@
-//! Auth service. Mirrors `apps/go-clean/service/auth.go`.
+//! Auth service. Mirrors `apps/{{ package_name | kebab_case }}/service/auth.go`.
 
 use std::sync::Arc;
 

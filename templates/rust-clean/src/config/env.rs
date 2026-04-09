@@ -1,5 +1,5 @@
 //! Env loader. Mirrors the env var surface of
-//! `apps/go-clean/.env.example` + `apps/go-clean/config/`.
+//! `apps/{{ package_name | kebab_case }}/.env.example` + `apps/{{ package_name | kebab_case }}/config/`.
 //!
 //! Figment auto-lowercases env keys (per the Phase B finding in
 //! `apps/fastapi-ai/src/core/env.rs`), so the Rust struct uses
@@ -47,7 +47,7 @@ pub struct Env {
 }
 
 fn default_service_name() -> String {
-    "go-clean".to_string()
+    "{{ package_name | kebab_case }}".to_string()
 }
 fn default_app_environment() -> String {
     "local".to_string()

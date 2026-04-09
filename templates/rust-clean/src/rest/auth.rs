@@ -1,6 +1,6 @@
 //! Auth handler: `POST /api/v1/auth/login`.
 //!
-//! Mirrors `apps/go-clean/internal/rest/auth.go`. Returns:
+//! Mirrors `apps/{{ package_name | kebab_case }}/internal/rest/auth.go`. Returns:
 //! - `200 ResponseSingleData<LoginResponse>` on success
 //! - `400 ResponseSingleData<Empty>` on payload bind failure
 //! - `401 ResponseSingleData<Empty>` on any auth failure
