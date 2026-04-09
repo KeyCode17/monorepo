@@ -65,4 +65,6 @@ generator:
     - 'https://oss.zero-one-group.com/monorepo/templates/strapi.zip'
     - 'https://oss.zero-one-group.com/monorepo/templates/swarm.zip'
     - 'https://oss.zero-one-group.com/monorepo/templates/terragrunt.zip'
-    - './templates'
+    # Uncomment the line below (and comment out the matching remote .zip above) to use
+    # local templates during development/contribution:
+    # - './templates'
