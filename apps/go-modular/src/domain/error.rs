@@ -1,7 +1,8 @@
 //! `AppError` — enum mapping every Phase D error condition to an
-//! HTTP status + envelope response. Mirrors Phase C go-clean's
-//! `AppError` pattern with go-modular-specific variants added for the
-//! corrected-port design decisions:
+//! HTTP status + `{"error": "..."}` body shape that matches the Go
+//! source's actual response convention.
+//!
+//! Variants specific to the Phase D corrected-port design:
 //!
 //! - `InvalidCredentials`        — 401 signin failure
 //! - `EmailNotVerified`          — 401 signin blocked
@@ -9,15 +10,13 @@
 //! - `SessionRevoked`            — 401 middleware check failure (3.2)
 //! - `ConcurrentRefresh`         — 409 row-lock timeout (3.1)
 //! - `OwnershipViolation`        — 403 set/update password authZ (3.9)
-//! - `VerificationCooldown`      — 429 with Retry-After (3.8)
-//! - `NotFound` / `BadRequest` / `Conflict` / `Internal` — generic
+//! - `VerificationCooldown`      — 429 with Retry-After header (3.8)
 
 use axum::Json;
-use axum::http::StatusCode;
+use axum::http::{HeaderValue, StatusCode};
 use axum::response::{IntoResponse, Response as AxumResponse};
+use serde_json::{Value, json};
 use thiserror::Error;
-
-use super::response::{Empty, ResponseSingleData};
 
 #[derive(Debug, Error)]
 pub enum AppError {
@@ -27,54 +26,55 @@ pub enum AppError {
     #[error(transparent)]
     Database(#[from] sqlx::Error),
 
-    #[error("not found")]
-    NotFound,
+    #[error("{0}")]
+    NotFound(String),
 
-    #[error("bad request: {0}")]
+    #[error("{0}")]
     BadRequest(String),
 
-    #[error("conflict: {0}")]
+    #[error("{0}")]
     Conflict(String),
 
-    #[error("invalid email or password")]
+    #[error("Invalid email or password")]
     InvalidCredentials,
 
-    #[error("email is not verified")]
+    #[error("Email is not verified")]
     EmailNotVerified,
 
-    #[error("unauthorized")]
+    #[error("Unauthorized")]
     Unauthorized,
 
-    #[error("invalid bearer token")]
+    #[error("Invalid bearer token")]
     InvalidBearer,
 
-    #[error("refresh token reuse detected — all sessions revoked")]
+    #[error("Refresh token reuse detected — all sessions revoked")]
     RefreshTokenReuse,
 
-    #[error("session revoked")]
+    #[error("Session revoked")]
     SessionRevoked,
 
-    #[error("concurrent refresh in progress")]
+    #[error("Concurrent refresh in progress")]
     ConcurrentRefresh,
 
-    #[error("cannot modify another user's resource")]
+    #[error("Cannot modify another user's resource")]
     OwnershipViolation,
 
-    #[error("verification email cooldown: retry after {retry_after} seconds")]
+    #[error("Verification email cooldown: retry after {retry_after} seconds")]
     VerificationCooldown { retry_after: u64 },
 
-    #[error("invalid payload: {0}")]
-    InvalidPayload(String),
+    /// Validation failure with a per-field details map (matches the
+    /// `apputils.ValidationErrorsToMap` shape in Go).
+    #[error("Validation failed")]
+    Validation(Value),
 }
 
 impl AppError {
-    /// Map each variant to its HTTP status code. Keep in sync with the
-    /// response envelope shaping logic below.
+    /// Map each variant to its HTTP status code.
     pub fn status(&self) -> StatusCode {
         match self {
             Self::Internal(_) | Self::Database(_) => StatusCode::INTERNAL_SERVER_ERROR,
-            Self::NotFound => StatusCode::NOT_FOUND,
-            Self::BadRequest(_) | Self::InvalidPayload(_) | Self::InvalidBearer => {
+            Self::NotFound(_) => StatusCode::NOT_FOUND,
+            Self::BadRequest(_) | Self::InvalidBearer | Self::Validation(_) => {
                 StatusCode::BAD_REQUEST
             }
             Self::Conflict(_) | Self::ConcurrentRefresh => StatusCode::CONFLICT,
@@ -98,22 +98,27 @@ impl From<anyhow::Error> for AppError {
 impl IntoResponse for AppError {
     fn into_response(self) -> AxumResponse {
         let status = self.status();
-        let envelope = ResponseSingleData::<Empty> {
-            code: status.as_u16(),
-            data: Empty {},
-            message: self.to_string(),
+        let body = match &self {
+            Self::Validation(details) => json!({
+                "error": "Validation failed",
+                "details": details,
+            }),
+            Self::VerificationCooldown { retry_after } => json!({
+                "error": self.to_string(),
+                "retry_after": retry_after,
+            }),
+            _ => json!({ "error": self.to_string() }),
         };
 
+        let mut response = (status, Json(body)).into_response();
+
         // Retry-After header for verification cooldown (HTTP 429).
-        if let Self::VerificationCooldown { retry_after } = self {
-            let retry = retry_after.to_string();
-            let mut response = (status, Json(envelope)).into_response();
-            if let Ok(v) = axum::http::HeaderValue::from_str(&retry) {
-                response.headers_mut().insert("retry-after", v);
-            }
-            return response;
+        if let Self::VerificationCooldown { retry_after } = self
+            && let Ok(v) = HeaderValue::from_str(&retry_after.to_string())
+        {
+            response.headers_mut().insert("retry-after", v);
         }
 
-        (status, Json(envelope)).into_response()
+        response
     }
 }

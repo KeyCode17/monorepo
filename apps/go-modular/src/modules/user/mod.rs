@@ -1,3 +1,14 @@
 //! User module — 5 CRUD endpoints (keep-track).
 //!
-//! Scaffold placeholder. Real module lands during D-USER-1..4.
+//! Port of `apps/go-modular/modules/user/` from Go to Rust. The
+//! module follows a strict repository -> service -> handler layering.
+
+pub mod handler;
+pub mod models;
+pub mod module;
+pub mod repository;
+pub mod service;
+
+pub use module::routes;
+pub use repository::UserRepository;
+pub use service::UserService;

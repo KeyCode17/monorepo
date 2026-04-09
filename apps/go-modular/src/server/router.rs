@@ -15,6 +15,7 @@ use axum::routing::get;
 
 use crate::AppState;
 use crate::middleware as mw;
+use crate::modules::user;
 use crate::server::handler;
 
 /// Build the axum router with full middleware stack applied.
@@ -22,15 +23,20 @@ pub fn build_router(state: AppState) -> Router {
     let config = state.config.clone();
     let app_cfg = &config.app;
 
+    // Module routes under /api/v1. User module is JWT-protected in
+    // Go; the `require_auth` middleware lands in D-AUTH-14 and will
+    // be applied here as `.route_layer(from_fn_with_state(...))`.
+    let api_v1 = Router::new().nest("/users", user::routes());
+
     // Infra routes (non-/api/v1).
+    // TODO(D-AUTH-13): merge auth module routes under /api/v1/auth.
     let infra_routes: Router<AppState> = Router::new()
         .route("/healthz", get(handler::healthz))
         .route("/api-docs", get(handler::api_docs))
         .route("/api/openapi.json", get(handler::openapi_json))
+        .nest("/api/v1", api_v1)
         .fallback(handler::not_found);
 
-    // TODO(D-USER-4): merge user module routes here.
-    // TODO(D-AUTH-13): merge auth module routes here.
     let router = infra_routes.with_state(state);
 
     // Tower layers applied from innermost to outermost. Order matches

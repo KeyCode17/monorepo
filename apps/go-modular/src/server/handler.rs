@@ -11,18 +11,32 @@ use axum::response::IntoResponse;
 use serde_json::json;
 
 use crate::AppState;
-use crate::domain::{Empty, ResponseSingleData};
 
-/// `GET /healthz` — liveness probe. Returns 200 with
-/// `{code, data, message}` envelope.
-pub async fn healthz(State(_state): State<AppState>) -> impl IntoResponse {
+/// `GET /healthz` — liveness probe. Matches the `alexliesenfeld/health`
+/// shape used by Go: `{"status": "up"}` on success with a per-check
+/// breakdown. The only check is a database ping.
+pub async fn healthz(State(state): State<AppState>) -> impl IntoResponse {
+    let db_status = if sqlx::query("SELECT 1").execute(&state.pool).await.is_ok() {
+        "up"
+    } else {
+        "down"
+    };
+
+    let overall = if db_status == "up" { "up" } else { "down" };
+    let status_code = if overall == "up" {
+        StatusCode::OK
+    } else {
+        StatusCode::SERVICE_UNAVAILABLE
+    };
+
     (
-        StatusCode::OK,
-        Json(ResponseSingleData::<Empty> {
-            code: 200,
-            data: Empty {},
-            message: "ok".to_string(),
-        }),
+        status_code,
+        Json(json!({
+            "status": overall,
+            "details": {
+                "database": { "status": db_status }
+            }
+        })),
     )
 }
 
@@ -31,13 +45,12 @@ pub async fn api_docs(State(state): State<AppState>) -> impl IntoResponse {
     if !state.config.app.enable_api_docs {
         return (
             StatusCode::NOT_FOUND,
-            Json(json!({"code": 404, "message": "api docs disabled"})),
+            Json(json!({"error": "API docs are disabled"})),
         );
     }
     (
         StatusCode::OK,
         Json(json!({
-            "code": 200,
             "message": "API docs placeholder — full utoipa surface lands in D-DOC-1",
             "openapi_url": "/api/openapi.json"
         })),
@@ -49,7 +62,7 @@ pub async fn openapi_json(State(state): State<AppState>) -> impl IntoResponse {
     if !state.config.app.enable_api_docs {
         return (
             StatusCode::NOT_FOUND,
-            Json(json!({"code": 404, "message": "api docs disabled"})),
+            Json(json!({"error": "API docs are disabled"})),
         );
     }
     (
@@ -70,10 +83,6 @@ pub async fn openapi_json(State(state): State<AppState>) -> impl IntoResponse {
 pub async fn not_found() -> impl IntoResponse {
     (
         StatusCode::NOT_FOUND,
-        Json(ResponseSingleData::<Empty> {
-            code: 404,
-            data: Empty {},
-            message: "route not found".to_string(),
-        }),
+        Json(json!({"error": "route not found"})),
     )
 }

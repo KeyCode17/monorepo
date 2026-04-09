@@ -1,36 +1,33 @@
-//! Response envelope shapes.
+//! Response envelope shapes used by go-modular.
 //!
-//! Matches the Go source's `internal/server/handler.go` + the per-module
-//! response structs byte-for-byte. Field order is significant — serde
-//! preserves struct-field-order in its output, so tests can assert on
-//! raw JSON bytes.
+//! Unlike Phase C go-clean (which wrapped every response in a
+//! `{code, data, message}` envelope), go-modular returns:
+//! - **Success**: raw struct JSON (no wrapping envelope)
+//! - **Updates / deletes**: `{"message": "..."}`
+//! - **Errors**: `{"error": "..."}` plus optional `{"details": ...}`
+//!
+//! The user handler (`modules/user/handler.go`) makes this explicit:
+//! ```text
+//! return c.JSON(http.StatusCreated, user)  // raw struct
+//! return c.JSON(http.StatusOK, map[string]string{"message": "User updated successfully"})
+//! return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid request payload"})
+//! ```
+//!
+//! This helper struct gives us a type-safe call site for the
+//! message-only shape used by update/delete success responses.
 
 use serde::{Deserialize, Serialize};
 
-/// Error envelope (no payload).
+/// `{"message": "..."}` — used by update/delete success responses.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Response {
-    pub code: u16,
+pub struct MessageResponse {
     pub message: String,
 }
 
-/// Success envelope with a single object payload.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ResponseSingleData<T: Serialize> {
-    pub code: u16,
-    pub data: T,
-    pub message: String,
+impl MessageResponse {
+    pub fn new(message: impl Into<String>) -> Self {
+        Self {
+            message: message.into(),
+        }
+    }
 }
-
-/// Success envelope with a paginated list payload.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ResponseMultipleData<T: Serialize> {
-    pub code: u16,
-    pub data: Vec<T>,
-    pub message: String,
-}
-
-/// Empty marker used as the `data` field when a success envelope has
-/// no payload (e.g., DELETE responses).
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Empty {}
