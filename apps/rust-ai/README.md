@@ -1,140 +1,98 @@
-# FastAPI AI Project Template
+# rust-ai
 
-Short brief description about the project.
+Rust/axum port of the AI service. Provides OpenAI-backed greeting endpoints with
+OpenTelemetry tracing, Prometheus metrics, and PostgreSQL persistence.
 
-## Check-In-Dance
+## Prerequisites
 
-### Prerequisites
-
-- Python 3.10+
+- Rust 1.90+
 - [Moonrepo](https://moonrepo.dev/docs/getting-started/installation)
-- Docker and Docker Compose (optional, for containerized development)
+- PostgreSQL 16+
+- Docker and Docker Compose (optional)
 
-### Installation
+## Quick Start
 
-1. Create a new project using this template:
+1. Generate a new project from this template:
 
     ```bash
-    moon generate template-fastapi-ai
+    moon generate rust-ai
     ```
 
 2. Set up environment variables:
 
     ```bash
     cp .env.example .env
-    # Edit .env with your configuration
+    # Edit .env — set DATABASE_URL and OPENAI_API_KEY
     ```
 
-3. Install dependencies:
+3. Add the new crate to the workspace (`Cargo.toml`):
+
+    ```toml
+    members = [
+        # ...
+        "apps/your-app-name",
+    ]
+    ```
+
+4. Run migrations and start:
 
     ```bash
-    moon fastapi-ai:sync
+    moon run rust-ai:migrate
+    moon run rust-ai:dev
     ```
 
-### Available Commands
+## Available Commands
 
-| Command                                              | Description                                                            |
-|------------------------------------------------------|------------------------------------------------------------------------|
-| `moon run fastapi-ai:sync`                           | Synchronize project dependencies using uv package manager              |
-| `moon run fastapi-ai:dev`                            | Start FastAPI development server with hot reload on port 8080          |
-| `moon run fastapi-ai:start`                          | Launch FastAPI production server on port 8080                          |
-| `moon run fastapi-ai:migrate`                        | Apply pending Alembic database migrations                              |
-| `moon run fastapi-ai:migrate-create -- "name"`       | Create a new empty Alembic migration file with the specified name      |
-| `moon run fastapi-ai:migrate-autogenerate -- "name"` | Generate an Alembic migration by detecting model changes automatically |
-| `moon run fastapi-ai:migrate-down`                   | Rollback the most recent database migration                            |
-| `moon run fastapi-ai:migrate-reset`                  | Reset database by rolling back all migrations (useful for clean slate) |
-| `moon run fastapi-ai:seed`                           | Populate database with dummy data using the seeder script              |
-| `moon run fastapi-ai:check-in-dance`                 | Complete setup: sync, migrate, and seed in sequence                    |
+| Command | Description |
+|---|---|
+| `moon run rust-ai:dev` | Run in development mode |
+| `moon run rust-ai:start` | Run release build |
+| `moon run rust-ai:build` | Build debug binary |
+| `moon run rust-ai:build-release` | Build release binary |
+| `moon run rust-ai:test` | Run all tests |
+| `moon run rust-ai:lint` | Run clippy lints |
+| `moon run rust-ai:migrate` | Apply pending migrations |
+| `moon run rust-ai:migrate-create -- "name"` | Create a new migration file |
+| `moon run rust-ai:migrate-down` | Revert last migration |
+| `moon run rust-ai:migrate-reset` | Reset database (destroys all data) |
+| `moon run rust-ai:check-in-dance` | Build + migrate (first-time setup) |
 
-### Running the Application
+## Endpoints
 
-#### Development Mode
+| Method | Path | Description |
+|---|---|---|
+| `GET` | `/` | Root health check |
+| `GET` | `/health-check` | Liveness probe |
+| `GET` | `/openai/greetings` | AI greeting via OpenAI |
 
-```bash
-# Start the development server with hot reloading
-moon fastapi-ai:dev
+## Architecture
+
+```
+src/
+├── core/         # Config, DB pool, error types, logging, OTel, metrics
+├── model/        # Domain models
+├── repository/   # Data access (OpenAI, Postgres)
+├── router/       # Axum route handlers
+└── services/     # Business logic
 ```
 
-#### Production Mode
+## Error Handling
 
-```bash
-moon fastapi-ai:start
+All errors return a structured JSON envelope:
+
+```json
+{
+  "success": false,
+  "message": "description",
+  "error_code": "CODE",
+  "data": null
+}
 ```
 
-#### Using Custom App Name
+Raise `AppError` from `core/exception.rs` at any layer — the global handler converts it automatically.
 
-If you've renamed your application, use:
+## Observability
 
-```bash
-moon fastapi-ai:dev
-```
-
-## Development
-
-To get started with this template, we recommend the following:
-
-1. Walk through the “Greeting API” example
-    - Begin at the router:
-
-    `app/router/openai.py`
-
-    - Inspect the service layer:
-
-    `app/services/greeting.py`
-
-    - Finally, examine the repository layer:
-
-    `app/repository/openai/greeting.py`
-
-2. Explore core abstractions in the app/core folder
-
-    These utilities and base classes are provided to improve developer experience by reducing boilerplate and enforcing consistent patterns across app.
-
-## Production
-
-### Instrumentation
-
-Tracing is enabled exclusively in the production environment. Set `APP_ENVIRONMENT` to `production` to activate tracing. Alternatively, you may customize the tracing rules in `app/core/trace.py`.
-
-For instructions on customizing span tracing, please refer to the example located at:
-
-- `apps/fastapi-ai/app/repository/openai/greeting.py`
-
-### Error Handling
-
-- We’ve set up a global exception handler in `app/main.py`. It catches every `AppError` raised anywhere in your code and turns it into a structured JSON error response with the correct HTTP status.
-- To trigger an error response, simply raise an `AppError` from `app/core/exceptions.py` at any layer (repository, service, or even directly in a route).
-
-  ```python
-  from app.core.exceptions import AppError
-
-  # inside repository or service
-  if something_went_wrong:
-      raise AppError(
-          message="Invalid user ID",
-          status_code=400,
-          code="INVALID_ID",
-          data={"user_id": supplied_id}
-      )
-  ```
-
-- The global handler will produce a response like:
-
-  ```json
-  {
-    "success": false,
-    "message": "Invalid user ID",
-    "error_code": "INVALID_ID",
-    "data": { "user_id": 123 }
-  }
-  ```
-
-- No further wiring is needed—just raise `AppError` and FastAPI does the rest.
-
-### Useful Links
-
-- [FastAPI Dependency Injection](https://fastapi.tiangolo.com/tutorial/dependencies/)
-  - TL;DR: Declare your dependencies as function parameters, and FastAPI will resolve and inject them for you automatically, no manual wiring required.
-  - For more details, see any dependency.py in your layers (e.g. app/repository/dependency.py).
-- [FastAPI Deployment](https://fastapi.tiangolo.com/deployment/)
-- [FastAPI Handling Errors](https://fastapi.tiangolo.com/tutorial/handling-errors/#install-custom-exception-handlers)
+- **Tracing**: OTel spans emitted in production (`APP_ENVIRONMENT=production`)
+- **Metrics**: Prometheus registry exposed at `/metrics`
+- Structural gaps vs the Python original documented in `src/core/instrumentation.rs`

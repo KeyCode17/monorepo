@@ -1,123 +1,96 @@
-# Golang Project Template
-Basic Go application for backend
+# rust-clean
 
-### Prerequisites
+Rust/axum clean architecture REST API with JWT authentication, bcrypt password hashing,
+rate limiting, and PostgreSQL persistence via sqlx.
 
-- Golang v1.24
+## Prerequisites
+
+- Rust 1.90+
 - [Moonrepo](https://moonrepo.dev/docs/getting-started/installation)
-- Postgres v17.x.x
-- Docker and Docker Compose (for containerized development)
+- PostgreSQL 16+
+- Docker and Docker Compose (optional)
 
-### Quick Start
+## Quick Start
 
-#### Create New Application
+1. Generate a new project from this template:
 
-1. Generate a new application from a template.
-
-```bash
-moon generate template-golang
-```
+    ```bash
+    moon generate rust-clean
+    ```
 
 2. Set up environment variables:
-```bash
-cp .env.example .env
+
+    ```bash
+    cp .env.example .env
+    # Edit .env — set DATABASE_URL, JWT_SECRET_KEY, etc.
+    ```
+
+3. Add the new crate to the workspace (`Cargo.toml`):
+
+    ```toml
+    members = [
+        # ...
+        "apps/your-app-name",
+    ]
+    ```
+
+4. Run migrations and start:
+
+    ```bash
+    moon run rust-clean:migrate
+    moon run rust-clean:dev
+    ```
+
+## Available Commands
+
+| Command | Description |
+|---|---|
+| `moon run rust-clean:dev` | Run in development mode |
+| `moon run rust-clean:start` | Run release build |
+| `moon run rust-clean:build` | Build debug binary |
+| `moon run rust-clean:build-release` | Build release binary |
+| `moon run rust-clean:test` | Run all tests |
+| `moon run rust-clean:lint` | Run clippy lints |
+| `moon run rust-clean:migrate` | Apply pending migrations |
+| `moon run rust-clean:migrate-create -- "name"` | Create a new migration file |
+| `moon run rust-clean:migrate-down` | Revert last migration |
+| `moon run rust-clean:migrate-reset` | Reset database (destroys all data) |
+| `moon run rust-clean:check-in-dance` | Build + migrate (first-time setup) |
+
+## Endpoints
+
+| Method | Path | Description |
+|---|---|---|
+| `GET` | `/` | Root health check |
+| `POST` | `/auth/register` | Register a new user |
+| `POST` | `/auth/login` | Login and receive JWT |
+| `GET` | `/users` | List users (authenticated) |
+| `GET` | `/users/:id` | Get user by ID (authenticated) |
+| `PUT` | `/users/:id` | Update user (authenticated) |
+
+## Architecture
+
 ```
-Adjust the variable to the desired value.
-
-3. Install dependencies:
-```bash
-moon run tidy
-```
-
-#### Running The Application
-
-1. Running on development mode
-```bash
-moon run dev
-```
-
-2. Build the application
-```bash
-moon run build
-```
-
-3. Running on production mode
-```bash
-moon run start
-```
-
-#### Running Migration
-
-1. Create new migration file
-```bash
-moon run migration-create -- {migration_name}
-```
-
-2. Migration up
-```bash
-moon run migration-up
-```
-
-3. Migration down
-```bash
-moon run migration-down
-```
-
-4. Migration reset
-```bash
-moon run migration-reset
-```
-
-4. Check Migration version
-```bash
-moon run migration-version
-```
-
-#### Running Seeders
-
-1. Run seeders for all tables
-```bash
-moon run seed -- all
-```
-
-2. Run seeder for certain table
-```bash
-moon run seed -- {table_name}
-```
-#### Running Tests
-
-##### 1. Install mockery (v3.5.1)
-
-We use [mockery](https://github.com/vektra/mockery) to generate interface mocks. Make sure you have exactly v3.5.1:
-
-Option A – via moon command: `moon go-clean:install-mockery`
-Option B – via GitHub binary
-
-Verify you have the right version:
-```bash
-mockery --version
-# ⇒ mockery version 3.5.1
+src/
+├── config/       # Env config loader (figment)
+├── domain/       # Domain types: User, Auth, Error, Response
+├── repository/   # Postgres data access layer
+├── rest/         # Axum handlers + JWT middleware
+├── service/      # Business logic
+└── utils/        # JWT helpers, password hashing
 ```
 
-##### 2. Run the test suite
+## Error Handling
 
-```bash
-moon run go-clean:test
+All errors return a structured JSON envelope:
+
+```json
+{
+  "success": false,
+  "message": "description",
+  "error_code": "CODE",
+  "data": null
+}
 ```
 
-NOTE: Everytime test run, it will automatically generate mock
-
-##### 3. Generate documentation
-
-```bash
-moon run go-clean:generate-swagger
-```
-
-## Production
-
-### Instrumentation
-Tracing is enabled exclusively in the production environment. Set `APP_ENVIRONMENT` to `production` to activate tracing. Alternatively, you may customize the tracing rules in `apps/go-clean/config/tracer.go`.
-
-For instructions on customizing span tracing, please refer to the example located at:
-- `apps/go-clean/internal/rest/user.go`
-    - From rest layer all the way down to repository layer
+Raise `AppError` from `domain/error.rs` — the global handler converts it automatically.
